@@ -1,1 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel do Fornecedor</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h2 {
+      color: #0055ff;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .botao {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #0055ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .botao:hover {
+      background-color: #003dcc;
+    }
+    .mensagem-azul {
+      color: blue;
+      font-weight: bold;
+    }
+    .mensagem-vermelha {
+      color: red;
+      font-weight: bold;
+    }
+    #mensagem {
+      margin-top: 20px;
+    }
+    .menu {
+      margin-top: 30px;
+    }
+    .menu a {
+      margin-right: 15px;
+      text-decoration: none;
+      font-weight: bold;
+      color: #0055ff;
+    }
+  </style>
+</head>
+<body>
+  <h2>Painel do Fornecedor</h2>
+
+  <form id="formCotacao">
+    <label>Código do Fornecedor:</label>
+    <input type="text" id="codigoFornecedor" placeholder="Ex: FORN-123" required>
+
+    <label>Observação (máx. 125 caracteres):</label>
+    <textarea id="observacao" maxlength="125"></textarea>
+
+    <label>Tabloide de Ofertas (PNG ou JPEG):</label>
+    <input type="file" id="tabloide" accept=".png, .jpg, .jpeg">
+
+    <label>Valor mínimo para pedido (R$):</label>
+    <input type="number" id="valorMinimo" min="0" step="0.01" required>
+
+    <label>Data prevista para entrega:</label>
+    <input type="date" id="dataEntrega" required>
+
+    <button type="submit" class="botao">Enviar Cotação</button>
+  </form>
+
+  <div id="mensagem"></div>
+
+  <div class="menu">
+    <a href="historico_fornecedor.html">📄 Ver Histórico</a>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    document.getElementById("formCotacao").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const codForn = document.getElementById("codigoFornecedor").value.trim();
+      const obs = document.getElementById("observacao").value.trim();
+      const minimo = parseFloat(document.getElementById("valorMinimo").value);
+      const entrega = document.getElementById("dataEntrega").value;
+      const tabloide = document.getElementById("tabloide").files[0];
+      const mensagem = document.getElementById("mensagem");
+
+      const agora = new Date();
+      const hoje = agora.toISOString().split('T')[0];
+      const horaAtual = agora.getHours().toString().padStart(2, '0') + ":" + agora.getMinutes().toString().padStart(2, '0');
+
+      const cotRef = db.ref("cotacoes");
+      const snapshot = await cotRef.orderByChild("data").equalTo(hoje).limitToLast(1).once("value");
+
+      let horarioLimite = "23:59";
+      snapshot.forEach(c => {
+        if (c.val().horarioLimite) horarioLimite = c.val().horarioLimite;
+      });
+
+      if (horaAtual > horarioLimite) {
+        mensagem.innerHTML = "<p class='mensagem-vermelha'>⛔ Horário para envio expirado!</p>";
+        return;
+      }
+
+      const cotacaoData = {
+        fornecedor: codForn,
+        observacao: obs,
+        valorMinimoPedido: minimo,
+        dataEntrega: entrega,
+        enviadoEm: agora.toISOString()
+      };
+
+      await db.ref("cotacoes/" + hoje + "/fornecedores/" + codForn).set(cotacaoData);
+
+      if (tabloide) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const tabloideBase64 = reader.result;
+          db.ref("tabloides/" + codForn).set({
+            imagem: tabloideBase64,
+            criadoEm: Date.now()
+          });
+        };
+        reader.readAsDataURL(tabloide);
+      }
+
+      mensagem.innerHTML = "<p class='mensagem-azul'>✔️ Obrigado pelo envio de sua cotação!<br>Sua apuração será realizada via sistema.</p>";
+
+      db.ref("fornecedores/" + codForn).once("value").then(dados => {
+        if (dados.exists()) {
+          const fone = dados.val().whatsapp || dados.val().telefone;
+          if (fone) {
+            const link = "https://wa.me/55" + fone.replace(/\D/g, '') +
+              "?text=Olá,%20confirmamos%20o%20recebimento%20de%20sua%20cotação%20em%20" + hoje + ".";
+            window.open(link, "_blank");
+          }
+        }
+      });
+    });
+
+    db.ref("tabloides").once("value").then(snapshot => {
+      const agora = Date.now();
+      snapshot.forEach(t => {
+        const criado = t.val().criadoEm || 0;
+        if (agora - criado > 7 * 24 * 60 * 60 * 1000) {
+          db.ref("tabloides/" + t.key).remove();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
 <!-- painel fornecedor -->
