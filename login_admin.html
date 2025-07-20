@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Administrador</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f1f1f1;
+      text-align: center;
+      padding-top: 100px;
+    }
+    .login-box {
+      background-color: white;
+      width: 300px;
+      margin: auto;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input {
+      display: block;
+      width: 90%;
+      padding: 10px;
+      margin: 10px auto;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      background-color: #0055ff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #003bb3;
+    }
+    .mensagem {
+      margin-top: 15px;
+      font-weight: bold;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>Login - Administrador</h2>
+    <input type="email" id="email" placeholder="E-mail" />
+    <input type="password" id="senha" placeholder="Senha" />
+    <button onclick="login()">Entrar</button>
+    <div id="mensagem" class="mensagem"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function login() {
+      const email = document.getElementById("email").value.trim();
+      const senha = document.getElementById("senha").value.trim();
+      const mensagem = document.getElementById("mensagem");
+
+      if (!email || !senha) {
+        mensagem.textContent = "Preencha e-mail e senha.";
+        return;
+      }
+
+      auth.signInWithEmailAndPassword(email, senha)
+        .then(userCred => {
+          const userId = userCred.user.uid;
+
+          db.ref("admin/" + userId + "/alterouSenha").once("value").then(snapshot => {
+            const alterou = snapshot.val();
+            if (alterou === true) {
+              window.location.href = "formulario_varejista.html";
+            } else {
+              alert("Login realizado! Por favor, altere sua senha.");
+              window.location.href = "alterar_senha_admin.html";
+            }
+          });
+        })
+        .catch(error => {
+          if (email === "admin@admin.com" && senha === "adm1234") {
+            // Login de primeiro acesso
+            auth.createUserWithEmailAndPassword(email, senha)
+              .then(userCred => {
+                const userId = userCred.user.uid;
+                db.ref("admin/" + userId).set({ alterouSenha: false });
+                alert("Primeiro acesso detectado! Redirecionando para criação de nova senha.");
+                window.location.href = "alterar_senha_admin.html";
+              })
+              .catch(e => {
+                mensagem.textContent = "Erro: " + e.message;
+              });
+          } else {
+            mensagem.textContent = "E-mail ou senha inválidos.";
+          }
+        });
+    }
+  </script>
+</body>
+</html>
