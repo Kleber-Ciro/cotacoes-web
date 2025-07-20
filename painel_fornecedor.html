@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Painel do Fornecedor</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -16,35 +16,39 @@
       color: #0055ff;
     }
     .alerta {
+      background-color: #d4fcd4;
+      border-left: 6px solid green;
       padding: 12px;
-      background-color: #fffae6;
-      border-left: 6px solid #ffc107;
       margin-bottom: 20px;
       font-weight: bold;
     }
-    .botoes button {
-      display: block;
-      width: 100%;
+    .botoes {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    button {
       padding: 12px;
-      margin: 10px 0;
+      font-size: 16px;
       background-color: #0055ff;
       color: white;
       border: none;
-      border-radius: 8px;
-      font-size: 16px;
+      border-radius: 6px;
       cursor: pointer;
     }
-    .botoes button:hover {
-      background-color: #0041c4;
+    button:hover {
+      background-color: #003dcc;
     }
   </style>
 </head>
 <body>
   <h2>Bem-vindo ao Painel do Fornecedor</h2>
-  <div id="alertaCotacao"></div>
+  <div id="mensagemCotacao"></div>
+
   <div class="botoes">
-    <button onclick="window.location.href='preencher_cotacao.html'" id="btnPreencherCotacao" style="display:none">Preencher Cotacao Disponível</button>
-    <button onclick="window.location.href='historico_fornecedor.html'">Ver Histórico de Cotações</button>
+    <button onclick="preencherCotacao()">📋 Preencher Cotação Disponível</button>
+    <button onclick="verHistorico()">📊 Ver Histórico de Cotações</button>
+    <button onclick="compartilharWhatsapp()">📤 Compartilhar Cotação via WhatsApp</button>
   </div>
 
   <script>
@@ -60,45 +64,49 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const codForn = localStorage.getItem("codigoFornecedor");
-
+    // 🔍 Verifica cotação disponível com horário limite
     function verificarCotacaoDisponivel() {
-      const alertaDiv = document.getElementById("alertaCotacao");
-      const botao = document.getElementById("btnPreencherCotacao");
+      db.ref("cotacoes_disponiveis").once("value").then(snapshot => {
+        if (!snapshot.exists()) return;
 
-      db.ref("cotacoes").once("value").then(snapshot => {
-        let encontrou = false;
-        const agora = new Date();
+        let cotacao = snapshot.val();
+        let horarioLimite = cotacao.horarioLimite || "23:59";
+        let agora = new Date();
+        let horaAtual = agora.toTimeString().substring(0,5);
 
-        snapshot.forEach(cot => {
-          const dados = cot.val();
-          const horarioLimite = dados.horarioLimite || "23:59";
-          const dataCot = new Date(dados.data + 'T' + horarioLimite);
-
-          if (agora <= dataCot && dados.produtos) {
-            for (const cod in dados.produtos) {
-              if (dados.produtos[cod].fornecedor === codForn) {
-                encontrou = true;
-                break;
-              }
-            }
-          }
-        });
-
-        if (encontrou) {
-          alertaDiv.innerHTML = '<div class="alerta">\u26A0\ufe0f Uma nova cotação está disponível para preenchimento!</div>';
-          botao.style.display = 'block';
-        } else {
-          alertaDiv.innerHTML = '<p style="color:gray">Nenhuma cotação disponível no momento.</p>';
+        if (horaAtual <= horarioLimite) {
+          document.getElementById("mensagemCotacao").innerHTML =
+            `<div class='alerta'>🟢 Nova cotação disponível para preenchimento até ${horarioLimite}!</div>`;
         }
       });
     }
 
-    if (codForn) {
-      verificarCotacaoDisponivel();
-    } else {
-      document.body.innerHTML = '<p style="color:red">Erro: Nenhum fornecedor logado. Acesse novamente o sistema.</p>';
+    // ▶️ Ação do botão de preencher cotação
+    function preencherCotacao() {
+      window.location.href = "formulario_fornecedor_completo.html";
     }
+
+    // 📈 Ação do botão de histórico
+    function verHistorico() {
+      const codigo = sessionStorage.getItem("codigoFornecedor") || prompt("Digite seu código de fornecedor:");
+      if (codigo) {
+        sessionStorage.setItem("codigoFornecedor", codigo);
+        window.location.href = "historico_fornecedor.html";
+      }
+    }
+
+    // 📲 Compartilhamento via WhatsApp
+    function compartilharWhatsapp() {
+      const telefone = sessionStorage.getItem("whatsappFornecedor");
+      if (!telefone) {
+        alert("Número do WhatsApp não encontrado.");
+        return;
+      }
+      const mensagem = encodeURIComponent("Olá! Segue o link para preenchimento da cotação: https://kleber-ciro.github.io/cotacoes-web/formulario_fornecedor_completo.html");
+      window.open(`https://wa.me/55${telefone}?text=${mensagem}`, "_blank");
+    }
+
+    verificarCotacaoDisponivel();
   </script>
 </body>
 </html>
