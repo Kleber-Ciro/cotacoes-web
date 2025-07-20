@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - Cotação de Produtos</title>
+  <link rel="stylesheet" href="assets/estilos.css">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f8f8f8; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 0 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+    h2 { text-align: center; color: #333; }
+    input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
+    button { width: 100%; padding: 10px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #1558b0; }
+    .switch { margin-top: 20px; text-align: center; }
+    .switch a { text-decoration: none; color: #1a73e8; }
+    .logo { display: flex; justify-content: center; margin-bottom: 20px; }
+    .logo img { width: 220px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="assets/sk (1).png" alt="Logo Streaming Konect">
+    </div>
+    <h2>Acesso à Plataforma</h2>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="E-mail" required>
+      <input type="password" id="senha" placeholder="Senha" required>
+      <select id="tipoUsuario" required>
+        <option value="">Selecione o tipo de acesso</option>
+        <option value="admin">Admin (Varejista)</option>
+        <option value="fornecedor">Fornecedor</option>
+      </select>
+      <button type="submit">Entrar</button>
+    </form>
+    <div class="switch">
+      <p><a href="cadastro_fornecedor.html">Criar primeiro acesso</a></p>
+    </div>
+  </div>
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const tipo = document.getElementById("tipoUsuario").value;
+      if (tipo === "admin") {
+        window.location.href = "admin/painel_admin.html";
+      } else if (tipo === "fornecedor") {
+        window.location.href = "fornecedor/formulario_fornecedor.html";
+      } else {
+        alert("Selecione o tipo de usuário.");
+      }
+    });
+  </script>
+</body>
+</html>
