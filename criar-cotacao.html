@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Nova Cotação</title>
+  <title>Criar Cotação - Varejista</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      max-width: 800px;
+      max-width: 900px;
       margin: auto;
     }
     h2 {
@@ -19,51 +19,56 @@
       display: block;
       margin-top: 12px;
     }
-    input, select {
+    input, select, textarea {
       width: 100%;
       padding: 8px;
       margin-top: 4px;
       border-radius: 6px;
       border: 1px solid #ccc;
     }
-    .produto-item {
-      margin-top: 8px;
-    }
-    button {
+    .botao {
       margin-top: 20px;
       padding: 12px;
       background-color: #0055ff;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 16px;
       cursor: pointer;
     }
-    button:hover {
+    .botao:hover {
       background-color: #003dcc;
+    }
+    ul {
+      margin-top: 10px;
+      padding-left: 20px;
     }
   </style>
 </head>
 <body>
-  <h2>Nova Cotação</h2>
+  <h2>Criar Nova Cotação</h2>
 
-  <label>Número da Cotação:</label>
-  <input type="text" id="numeroCotacao" readonly>
+  <form id="formCotacao">
+    <label>Descrição ou Nº da Cotação:</label>
+    <input type="text" id="descricaoCotacao" required>
 
-  <label>Data de Envio:</label>
-  <input type="date" id="dataEnvio" required>
+    <label>Data da Cotação:</label>
+    <input type="text" id="dataCotacao" readonly>
 
-  <label>Horário Limite de Resposta:</label>
-  <input type="time" id="horarioLimite" required>
+    <label>Horário Limite para Envio (Ex: 16:00):</label>
+    <input type="time" id="horarioLimite" required>
 
-  <h3>Selecionar Produtos:</h3>
-  <div id="listaProdutos"></div>
+    <label>Selecionar Produtos (Ctrl + clique para múltiplos):</label>
+    <select id="produtosSelect" multiple size="6"></select>
 
-  <button onclick="gerarCotacao()">Gerar Cotação</button>
+    <button type="submit" class="botao">Salvar Cotação</button>
+  </form>
+
+  <div id="mensagem"></div>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
       authDomain: "cotacoes---konect.firebaseapp.com",
       databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
       projectId: "cotacoes---konect",
@@ -74,47 +79,57 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    document.getElementById("numeroCotacao").value = "COT-" + Date.now();
+    // Preencher data automática
+    const hoje = new Date();
+    const dataFormatada = hoje.toISOString().split('T')[0];
+    document.getElementById("dataCotacao").value = dataFormatada;
 
-    // Listar produtos cadastrados
+    // Carregar produtos cadastrados
+    const produtosSelect = document.getElementById("produtosSelect");
     db.ref("produtos").once("value").then(snapshot => {
-      const lista = document.getElementById("listaProdutos");
       snapshot.forEach(prod => {
-        const id = prod.key;
-        const nome = prod.val().descricao;
-        const div = document.createElement("div");
-        div.className = "produto-item";
-        div.innerHTML = `<input type='checkbox' value='${id}'> ${nome}`;
-        lista.appendChild(div);
+        const codigo = prod.key;
+        const descricao = prod.val().descricao || "";
+        const option = document.createElement("option");
+        option.value = codigo;
+        option.text = `${codigo} - ${descricao}`;
+        produtosSelect.appendChild(option);
       });
     });
 
-    function gerarCotacao() {
-      const numero = document.getElementById("numeroCotacao").value;
-      const dataEnvio = document.getElementById("dataEnvio").value;
-      const horario = document.getElementById("horarioLimite").value;
-      const selecionados = document.querySelectorAll("#listaProdutos input[type=checkbox]:checked");
+    // Salvar cotação
+    document.getElementById("formCotacao").addEventListener("submit", function(e) {
+      e.preventDefault();
 
-      if (selecionados.length === 0) return alert("Selecione ao menos um produto!");
+      const cotacaoData = {
+        descricao: document.getElementById("descricaoCotacao").value,
+        data: document.getElementById("dataCotacao").value,
+        horarioLimite: document.getElementById("horarioLimite").value,
+        produtos: {}
+      };
 
-      const produtosCotacao = {};
-      selecionados.forEach(input => {
-        produtosCotacao[input.value] = {
-          preco: null,
-          fornecedor: null,
-          comprado: false
+      const selecionados = Array.from(produtosSelect.selectedOptions).map(opt => opt.value);
+      if (selecionados.length === 0) {
+        alert("Selecione ao menos um produto!");
+        return;
+      }
+
+      selecionados.forEach(codigo => {
+        cotacaoData.produtos[codigo] = {
+          status: "aguardando",
+          fornecedor: "",
+          preco: 0
         };
       });
 
-      db.ref("cotacoes/" + numero).set({
-        data: dataEnvio,
-        horarioLimite: horario,
-        produtos: produtosCotacao
-      }).then(() => {
-        alert("Cotação gerada com sucesso!");
-        window.location.href = "dashboard.html";
+      db.ref("cotacoes").push(cotacaoData).then(() => {
+        document.getElementById("mensagem").innerText = "Cotação criada com sucesso!";
+        document.getElementById("formCotacao").reset();
+        document.getElementById("dataCotacao").value = dataFormatada;
+        produtosSelect.innerHTML = ""; // reset produtos
+        setTimeout(() => window.location.reload(), 1500);
       });
-    }
+    });
   </script>
 </body>
 </html>
