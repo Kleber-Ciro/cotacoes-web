@@ -1,4 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login do Fornecedor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+      max-width: 400px;
+      width: 100%;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Primeiro Acesso do Fornecedor</h2>
+  <input type="text" id="razaoSocial" placeholder="Razão Social" required />
+  <input type="text" id="cnpj" placeholder="CNPJ" required />
+  <input type="text" id="vendedor" placeholder="Nome do Vendedor" required />
+  <input type="email" id="email" placeholder="E-mail" required />
+  <input type="password" id="senha" placeholder="Senha (mínimo 6 caracteres)" required />
+  <input type="text" id="whatsapp" placeholder="WhatsApp" required />
+  <input type="text" id="telefoneFixo" placeholder="Telefone Fixo" required />
+  <button id="btnPrimeiroAcesso">Criar primeiro acesso</button>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
 <script>
+  // Configuração Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
     authDomain: "cotacoes---konect.firebaseapp.com",
@@ -8,70 +64,52 @@
     messagingSenderId: "1037489090128",
     appId: "1:1037489090128:web:09998d990338d15e276b55"
   };
+
   firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
   const auth = firebase.auth();
+  const db = firebase.database();
 
-  const emailInput = document.getElementById("email");
-  const senhaInput = document.getElementById("senha");
-  const btnLogin = document.getElementById("btnLogin");
-  const btnPrimeiroAcesso = document.getElementById("btnPrimeiroAcesso");
+  // Evento de clique no botão
+  document.getElementById("btnPrimeiroAcesso").addEventListener("click", () => {
+    const razaoSocial = document.getElementById("razaoSocial").value.trim();
+    const cnpj = document.getElementById("cnpj").value.trim();
+    const vendedor = document.getElementById("vendedor").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const senha = document.getElementById("senha").value.trim();
+    const whatsapp = document.getElementById("whatsapp").value.trim();
+    const telefoneFixo = document.getElementById("telefoneFixo").value.trim();
 
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      // já logado, redireciona direto para o painel
-      window.location.href = "painel_fornecedor.html";
-    }
-  });
-
-  btnLogin.addEventListener("click", () => {
-    const email = emailInput.value;
-    const senha = senhaInput.value;
-
-    auth.signInWithEmailAndPassword(email, senha)
-      .then(() => {
-        window.location.href = "painel_fornecedor.html";
-      })
-      .catch((error) => {
-        alert("Erro no login: " + error.message);
-      });
-  });
-
-  btnPrimeiroAcesso.addEventListener("click", () => {
-    const email = prompt("Digite seu e-mail:");
-    const senha = prompt("Crie uma senha de 6 caracteres:");
-    const razaoSocial = prompt("Razão Social:");
-    const cnpj = prompt("CNPJ:");
-    const vendedor = prompt("Nome do vendedor:");
-    const whatsapp = prompt("WhatsApp:");
-    const telefoneFixo = prompt("Telefone fixo:");
-
-    if (senha.length < 6) {
-      alert("A senha deve ter no mínimo 6 caracteres.");
+    if (!razaoSocial || !cnpj || !vendedor || !email || !senha || !whatsapp || !telefoneFixo) {
+      alert("Preencha todos os campos obrigatórios.");
       return;
     }
 
     auth.createUserWithEmailAndPassword(email, senha)
       .then((userCredential) => {
         const uid = userCredential.user.uid;
-        const codigo = "FORN-" + Math.floor(Math.random() * 9000 + 1000); // Ex: FORN-2381
+        const codigoFornecedor = "FORN-" + Math.floor(1000 + Math.random() * 9000);
 
         db.ref("fornecedores/" + uid).set({
+          email,
           razaoSocial,
           cnpj,
-          email,
           vendedor,
           whatsapp,
           telefoneFixo,
-          codigo
+          codigo: codigoFornecedor,
+          ativo: true
         }).then(() => {
           alert("Usuário criado com sucesso!");
+          document.getElementById("btnPrimeiroAcesso").style.display = "none";
           window.location.href = "painel_fornecedor.html";
         });
       })
       .catch((error) => {
+        console.error(error);
         alert("Erro ao criar usuário: " + error.message);
       });
   });
 </script>
 
+</body>
+</html>
