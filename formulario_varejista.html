@@ -12,13 +12,6 @@
         <label>Embalagem (kg/unidade):<br><input type="text" id="embalagem" required></label><br><br>
         <label>Marca:<br><input type="text" id="marca" required></label><br><br>
         <label>Quantidade:<br><input type="number" id="quantidade" required></label><br><br>
-        <label>Permitir produto similar pelo fornecedor?<br>
-            <select id="permitir_similar">
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-            </select></label><br><br>
-        <label>Anexar imagem do produto (JPEG ou PNG):<br>
-            <input type="file" id="imagem_produto" accept="image/png, image/jpeg"></label><br><br>
         <button type="submit">Cadastrar Produto</button>
     </form>
 
@@ -26,58 +19,43 @@
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <script>
+        // CONFIGURAÇÃO DO FIREBASE
         var firebaseConfig = {
-            apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+            apiKey: "SUA_API_KEY",
             authDomain: "cotacoes---konect.firebaseapp.com",
             databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
             projectId: "cotacoes---konect",
-            storageBucket: "cotacoes---konect.firebasestorage.app",
-            messagingSenderId: "1037489090128",
-            appId: "1:1037489090128:web:09998d990338d15e276b55"
+            storageBucket: "cotacoes---konect.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
         };
         firebase.initializeApp(firebaseConfig);
         var database = firebase.database();
-        var storage = firebase.storage();
 
+        // ENVIO DO FORMULÁRIO
         document.getElementById("produtoForm").addEventListener("submit", function(e) {
             e.preventDefault();
+            var descricao = document.getElementById("descricao").value;
+            var embalagem = document.getElementById("embalagem").value;
+            var marca = document.getElementById("marca").value;
+            var quantidade = document.getElementById("quantidade").value;
 
-            var produto = {
-                descricao: document.getElementById("descricao").value,
-                embalagem: document.getElementById("embalagem").value,
-                marca: document.getElementById("marca").value,
-                quantidade: parseInt(document.getElementById("quantidade").value),
-                permitir_similar: document.getElementById("permitir_similar").value === "true",
-                imagem: ""
+            var novoProduto = {
+                descricao: descricao,
+                embalagem: embalagem,
+                marca: marca,
+                quantidade: quantidade
             };
 
-            var file = document.getElementById("imagem_produto").files[0];
-            if (file) {
-                var ref = storage.ref().child("produtos/" + Date.now() + "_" + file.name);
-                ref.put(file).then(snapshot => snapshot.ref.getDownloadURL())
-                    .then(url => {
-                        produto.imagem = url;
-                        return database.ref("produtos").push(produto);
-                    })
-                    .then(() => {
-                        document.getElementById("status").innerText = "Produto cadastrado com imagem!";
-                        document.getElementById("produtoForm").reset();
-                    })
-                    .catch(error => {
-                        document.getElementById("status").innerText = "Erro: " + error.message;
-                    });
-            } else {
-                database.ref("produtos").push(produto)
-                    .then(() => {
-                        document.getElementById("status").innerText = "Produto cadastrado sem imagem!";
-                        document.getElementById("produtoForm").reset();
-                    })
-                    .catch(error => {
-                        document.getElementById("status").innerText = "Erro: " + error.message;
-                    });
-            }
+            database.ref("produtos").push(novoProduto)
+                .then(() => {
+                    document.getElementById("status").innerText = "Produto cadastrado com sucesso!";
+                    document.getElementById("produtoForm").reset();
+                })
+                .catch((error) => {
+                    document.getElementById("status").innerText = "Erro ao salvar: " + error.message;
+                });
         });
     </script>
 </body>

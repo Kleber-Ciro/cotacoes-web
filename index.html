@@ -2,134 +2,52 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Painel de Cotações - Admin com Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f5f7fa; padding: 20px; }
-        h2 { color: #2c3e50; margin-bottom: 10px; }
-        label { font-weight: bold; }
-        .filtros select, .filtros input { margin-right: 10px; margin-bottom: 10px; padding: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background: #eee; }
-        .grafico-container { margin-top: 40px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 6px #ccc; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Acesso ao Sistema</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f3f3f3; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .login-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+    h2 { text-align: center; color: #333; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
+    button { background-color: #007BFF; color: white; font-weight: bold; border: none; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    .link { text-align: center; margin-top: 10px; }
+    .link a { color: #007BFF; text-decoration: none; }
+    img.logo { display: block; margin: 0 auto 20px; max-width: 180px; }
+  </style>
 </head>
 <body>
-    <h2>📊 Painel Gerencial de Cotações</h2>
-
-    <div class="filtros">
-        <label>Fornecedor:</label><input type="text" id="filtroFornecedor">
-        <label>Produto:</label><input type="text" id="filtroProduto">
-        <label>Data:</label><input type="date" id="filtroData">
-        <label>Preço até:</label><input type="number" id="filtroPreco" step="0.01">
-        <label>Prazo Pgto:</label><input type="text" id="filtroPrazo">
-        <label>Data Entrega:</label><input type="date" id="filtroEntrega">
-        <button onclick="aplicarFiltros()">Filtrar</button>
+  <div class="login-container">
+    <img src="assets/sk (1).png" alt="Logo" class="logo" />
+    <h2>Login do Sistema</h2>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="E-mail" required />
+      <input type="password" id="senha" placeholder="Senha" required />
+      <select id="perfil" required>
+        <option value="">Selecione o tipo de acesso</option>
+        <option value="admin">Admin (Varejista)</option>
+        <option value="fornecedor">Fornecedor</option>
+      </select>
+      <button type="submit">Entrar</button>
+    </form>
+    <div class="link">
+      <a href="cadastro_usuario_configurado.html">Criar primeiro acesso</a>
     </div>
+  </div>
 
-    <div id="tabela-container">Carregando cotações...</div>
-
-    <div class="grafico-container">
-        <h3>Resumo Gráfico</h3>
-        <canvas id="graficoCotacoes" width="400" height="150"></canvas>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
-            authDomain: "cotacoes---konect.firebaseapp.com",
-            databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
-            projectId: "cotacoes---konect",
-            storageBucket: "cotacoes---konect.firebasestorage.app",
-            messagingSenderId: "1037489090128",
-            appId: "1:1037489090128:web:09998d990338d15e276b55"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-
-        let dadosCotacoes = [];
-
-        function carregarCotacoes() {
-            db.ref("cotacoes").once("value").then(snapshot => {
-                const dados = snapshot.val();
-                dadosCotacoes = [];
-                for (let id in dados) {
-                    dadosCotacoes.push(dados[id]);
-                }
-                renderTabela(dadosCotacoes);
-                renderGrafico(dadosCotacoes);
-            });
-        }
-
-        function aplicarFiltros() {
-            let fornecedor = document.getElementById("filtroFornecedor").value.toLowerCase();
-            let produto = document.getElementById("filtroProduto").value.toLowerCase();
-            let data = document.getElementById("filtroData").value;
-            let precoMax = parseFloat(document.getElementById("filtroPreco").value);
-            let prazo = document.getElementById("filtroPrazo").value.toLowerCase();
-            let entrega = document.getElementById("filtroEntrega").value;
-
-            let filtrado = dadosCotacoes.filter(c => {
-                return (!fornecedor || c.fornecedor.toLowerCase().includes(fornecedor)) &&
-                       (!produto || c.produto.nome.toLowerCase().includes(produto)) &&
-                       (!data || c.data === data) &&
-                       (!isNaN(precoMax) ? parseFloat(c.produto.valor) <= precoMax : true) &&
-                       (!prazo || c.prazo_pagamento.toLowerCase().includes(prazo)) &&
-                       (!entrega || c.data_entrega === entrega);
-            });
-
-            renderTabela(filtrado);
-            renderGrafico(filtrado);
-        }
-
-        function renderTabela(lista) {
-            let html = "<table><tr><th>Nº Cotação</th><th>Fornecedor</th><th>Produto</th><th>Valor</th><th>Entrega</th><th>Prazo Pgto</th><th>Data</th></tr>";
-            lista.forEach(c => {
-                html += `<tr>
-                    <td>${c.numero || "-"}</td>
-                    <td>${c.fornecedor}</td>
-                    <td>${c.produto.nome}</td>
-                    <td>R$ ${parseFloat(c.produto.valor).toFixed(2)}</td>
-                    <td>${c.data_entrega}</td>
-                    <td>${c.prazo_pagamento}</td>
-                    <td>${c.data}</td>
-                </tr>`;
-            });
-            html += "</table>";
-            document.getElementById("tabela-container").innerHTML = html;
-        }
-
-        function renderGrafico(lista) {
-            const fornecedores = {};
-            lista.forEach(c => {
-                fornecedores[c.fornecedor] = (fornecedores[c.fornecedor] || 0) + 1;
-            });
-            const ctx = document.getElementById('graficoCotacoes').getContext('2d');
-            if (window.grafico) window.grafico.destroy();
-            window.grafico = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(fornecedores),
-                    datasets: [{
-                        label: 'Qtd. de Cotações por Fornecedor',
-                        data: Object.values(fornecedores),
-                        backgroundColor: '#3f51b5'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        carregarCotacoes();
-    </script>
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const perfil = document.getElementById("perfil").value;
+      if (perfil === "admin") {
+        window.location.href = "painel_cotacoes_varejista.html";
+      } else if (perfil === "fornecedor") {
+        window.location.href = "formulario_fornecedor.html";
+      } else {
+        alert("Por favor, selecione um tipo de acesso.");
+      }
+    });
+  </script>
 </body>
 </html>
