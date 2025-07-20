@@ -1,30 +1,33 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Login Fornecedor</title>
+  <title>Login do Fornecedor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
+      background-color: #f4f7fb;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
+      justify-content: center;
       height: 100vh;
+      margin: 0;
     }
     .login-container {
-      background: white;
-      padding: 30px;
+      background-color: white;
+      padding: 30px 40px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      width: 100%;
+      box-shadow: 0px 0px 10px #aaa;
       max-width: 400px;
+      width: 100%;
     }
     h2 {
-      text-align: center;
       color: #0055ff;
+      text-align: center;
     }
     label {
       display: block;
@@ -34,13 +37,13 @@
       width: 100%;
       padding: 10px;
       margin-top: 5px;
-      border-radius: 5px;
+      border-radius: 6px;
       border: 1px solid #ccc;
     }
     button {
       width: 100%;
-      padding: 12px;
       margin-top: 20px;
+      padding: 12px;
       background-color: #0055ff;
       color: white;
       border: none;
@@ -51,29 +54,36 @@
     button:hover {
       background-color: #003dcc;
     }
-    .erro {
+    .mensagem-erro {
+      margin-top: 10px;
       color: red;
-      margin-top: 15px;
+      text-align: center;
+    }
+    .mensagem-sucesso {
+      margin-top: 10px;
+      color: green;
       text-align: center;
     }
   </style>
 </head>
 <body>
   <div class="login-container">
-    <h2>Login Fornecedor</h2>
-    <label for="codigo">Código do Fornecedor:</label>
-    <input type="text" id="codigo" placeholder="Ex: FORN-123" required>
+    <h2>Login do Fornecedor</h2>
+    <form id="loginForm">
+      <label for="codigoFornecedor">Código do Fornecedor:</label>
+      <input type="text" id="codigoFornecedor" required placeholder="Ex: FORN-123">
 
-    <label for="senha">Senha:</label>
-    <input type="password" id="senha" placeholder="Mínimo 6 caracteres" required>
+      <label for="senhaFornecedor">Senha:</label>
+      <input type="password" id="senhaFornecedor" required placeholder="Mínimo 6 caracteres">
 
-    <button onclick="fazerLogin()">Entrar</button>
-    <div class="erro" id="mensagemErro"></div>
+      <button type="submit">Entrar</button>
+    </form>
+    <div id="mensagem" class="mensagem-erro"></div>
   </div>
 
   <script>
     const firebaseConfig = {
-      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
       authDomain: "cotacoes---konect.firebaseapp.com",
       databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
       projectId: "cotacoes---konect",
@@ -81,32 +91,31 @@
       messagingSenderId: "1037489090128",
       appId: "1:1037489090128:web:09998d990338d15e276b55"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function fazerLogin() {
-      const codigo = document.getElementById("codigo").value.trim();
-      const senha = document.getElementById("senha").value.trim();
-      const erro = document.getElementById("mensagemErro");
-      erro.innerText = "";
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
 
-      if (codigo.length < 6 || senha.length < 6) {
-        erro.innerText = "Preencha todos os campos corretamente.";
-        return;
-      }
+      const codigo = document.getElementById("codigoFornecedor").value.trim();
+      const senha = document.getElementById("senhaFornecedor").value.trim();
+      const mensagem = document.getElementById("mensagem");
 
       db.ref("fornecedores/" + codigo).once("value").then(snapshot => {
-        const dados = snapshot.val();
-        if (dados && dados.senha === senha) {
-          localStorage.setItem("codigoFornecedor", codigo);
-          window.location.href = "painel_fornecedor.html";
+        if (snapshot.exists()) {
+          const dados = snapshot.val();
+          if (dados.senha === senha) {
+            localStorage.setItem("codigoFornecedorLogado", codigo);
+            window.location.href = "painel_fornecedor.html";
+          } else {
+            mensagem.innerText = "Senha incorreta!";
+          }
         } else {
-          erro.innerText = "Código ou senha incorretos.";
+          mensagem.innerText = "Fornecedor não encontrado!";
         }
-      }).catch(() => {
-        erro.innerText = "Erro ao conectar. Tente novamente.";
       });
-    }
+    });
   </script>
 </body>
 </html>
