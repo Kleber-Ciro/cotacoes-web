@@ -4,21 +4,22 @@
   <meta charset="UTF-8">
   <title>Preencher Cotação</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-    h2 { color: #0055ff; }
-    .produto { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-    label { display: block; margin-bottom: 4px; font-weight: bold; }
-    input { width: 100%; margin-bottom: 10px; padding: 6px; }
-    button { padding: 10px 20px; font-size: 16px; }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { color: #007bff; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background-color: #f2f2f2; }
+    input[type='number'] { width: 100px; }
+    button { margin-top: 20px; padding: 10px 20px; }
   </style>
 </head>
 <body>
   <h2>Preencher Cotação Disponível</h2>
-  <div id="formulario"></div>
-  <button onclick="enviarCotacao()">Enviar Cotação</button>
+  <div id="cotacaoContainer">Carregando cotação...</div>
+  <div><button id="enviarBtn">Enviar Cotação</button></div>
 
   <script>
     const firebaseConfig = {
@@ -32,73 +33,71 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
     const auth = firebase.auth();
+    const db = firebase.database();
 
-    const cotacaoId = localStorage.getItem("cotacaoDisponivelId");
-    if (!cotacaoId) {
-      document.getElementById("formulario").innerHTML = "<p style='color:red;'>Nenhuma cotação disponível para preenchimento.</p>";
-      throw new Error("Nenhuma cotação ativa.");
-    }
+    const cotacaoContainer = document.getElementById("cotacaoContainer");
+    const enviarBtn = document.getElementById("enviarBtn");
+    let produtosAtuais = {};
+    let idCotacao = localStorage.getItem("cotacaoDisponivelId");
 
-    let userId;
     auth.onAuthStateChanged(user => {
-      if (user) {
-        userId = user.uid;
-        carregarCotacao();
-      } else {
+      if (!user) {
+        alert("Você precisa estar logado.");
         window.location.href = "login_fornecedor.html";
+        return;
       }
+
+      if (!idCotacao) {
+        cotacaoContainer.innerHTML = "Nenhuma cotação disponível.";
+        return;
+      }
+
+      db.ref("cotacoes/" + idCotacao + "/produtos").once("value").then(snapshot => {
+        produtosAtuais = snapshot.val();
+        if (!produtosAtuais) {
+          cotacaoContainer.innerHTML = "Nenhum produto disponível nesta cotação.";
+          return;
+        }
+
+        let html = '<form id="formResposta"><table><thead><tr><th>Produto</th><th>Marca</th><th>Embalagem</th><th>Preço (R$)</th></tr></thead><tbody>';
+        for (let cod in produtosAtuais) {
+          const prod = produtosAtuais[cod];
+          html += `<tr>
+            <td>${prod.descricao || "Produto"}</td>
+            <td><input type="text" name="marca-${cod}" required></td>
+            <td><input type="text" name="embalagem-${cod}" required></td>
+            <td><input type="number" step="0.01" name="preco-${cod}" required></td>
+          </tr>`;
+        }
+        html += '</tbody></table></form>';
+        cotacaoContainer.innerHTML = html;
+      });
     });
 
-    function carregarCotacao() {
-      db.ref("cotacoes/" + cotacaoId + "/produtos").once("value").then(snapshot => {
-        const container = document.getElementById("formulario");
-        container.innerHTML = "";
-        snapshot.forEach(prodSnap => {
-          const prod = prodSnap.val();
-          const codigo = prodSnap.key;
+    enviarBtn.addEventListener("click", () => {
+      const user = auth.currentUser;
+      if (!user) return;
 
-          const div = document.createElement("div");
-          div.className = "produto";
-          div.innerHTML = `
-            <input type="hidden" name="codigo" value="${codigo}">
-            <label>${prod.descricao}</label>
-            <label>Marca:</label>
-            <input type="text" name="marca-${codigo}" required>
-            <label>Embalagem:</label>
-            <input type="text" name="embalagem-${codigo}" required>
-            <label>Quantidade:</label>
-            <input type="number" name="quantidade-${codigo}" required>
-            <label>Preço Unitário (R$):</label>
-            <input type="number" step="0.01" name="preco-${codigo}" required>
-          `;
-          container.appendChild(div);
-        });
-      });
-    }
-
-    function enviarCotacao() {
+      const uid = user.uid;
+      const form = document.getElementById("formResposta");
       const respostas = {};
-      const inputs = document.querySelectorAll(".produto");
 
-      inputs.forEach(div => {
-        const codigo = div.querySelector("input[name^='codigo']").value;
-        const marca = div.querySelector(`input[name='marca-${codigo}']`).value;
-        const embalagem = div.querySelector(`input[name='embalagem-${codigo}']`).value;
-        const quantidade = div.querySelector(`input[name='quantidade-${codigo}']`).value;
-        const preco = div.querySelector(`input[name='preco-${codigo}']`).value;
+      for (let cod in produtosAtuais) {
+        respostas[cod] = {
+          marca: form[`marca-${cod}`].value,
+          embalagem: form[`embalagem-${cod}`].value,
+          preco: form[`preco-${cod}`].value
+        };
+      }
 
-        respostas[codigo] = { marca, embalagem, quantidade, preco };
-      });
-
-      db.ref("cotacoes/" + cotacaoId + "/respostas/" + userId).set(respostas)
+      db.ref(`cotacoes/${idCotacao}/respostas/${uid}`).set(respostas)
         .then(() => {
           alert("Cotação enviada com sucesso!");
           window.location.href = "painel_fornecedor.html";
         })
-        .catch(err => alert("Erro ao enviar: " + err.message));
-    }
+        .catch(error => alert("Erro ao enviar cotação: " + error.message));
+    });
   </script>
 </body>
 </html>
