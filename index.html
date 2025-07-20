@@ -1,1 +1,75 @@
-<!-- index.html - Tela de login -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Cotações</title>
+  <link rel="stylesheet" href="estilo_login.css">
+  <style>
+    body {
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background-color: #ffffff10;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 30px;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 15px;
+    }
+
+    .btn-varejista {
+      background-color: #f39c12;
+      color: #fff;
+    }
+
+    .btn-varejista:hover {
+      background-color: #e67e22;
+    }
+
+    .btn-fornecedor {
+      background-color: #3498db;
+      color: #fff;
+    }
+
+    .btn-fornecedor:hover {
+      background-color: #2980b9;
+    }
+
+    .logo {
+      max-width: 150px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="logo.png" alt="Logo do sistema" class="logo">
+    <h1>Bem-vindo ao Sistema de Cotações</h1>
+    <button class="btn-varejista" onclick="window.location.href='formulario_varejista.html'">Sou Varejista</button>
+    <button class="btn-fornecedor" onclick="window.location.href='login_fornecedor.html'">Sou Fornecedor</button>
+  </div>
+</body>
+</html>
