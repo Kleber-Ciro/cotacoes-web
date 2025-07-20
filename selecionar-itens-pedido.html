@@ -32,6 +32,13 @@
       color: red;
       font-weight: bold;
     }
+    .mensagem-sucesso {
+      color: #0055ff;
+      font-weight: bold;
+    }
+    input[type="number"] {
+      width: 60px;
+    }
   </style>
 </head>
 <body>
@@ -41,6 +48,7 @@
   <input type="text" id="numeroCotacao" placeholder="Ex: COT-1234567890">
   <button onclick="carregarCotacao()">Carregar</button>
 
+  <div id="mensagemSucesso" class="mensagem-sucesso"></div>
   <div id="resultado"></div>
 
   <script>
@@ -56,10 +64,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let cotacaoAtual = {};
+    let dadosProdutos = [];
+
     function carregarCotacao() {
       const numero = document.getElementById("numeroCotacao").value;
       const container = document.getElementById("resultado");
+      const msg = document.getElementById("mensagemSucesso");
       container.innerHTML = "";
+      msg.innerHTML = "";
+      cotacaoAtual = {};
+      dadosProdutos = [];
 
       db.ref("cotacoes/" + numero).once("value").then(snapshot => {
         if (!snapshot.exists()) {
@@ -68,47 +83,77 @@
         }
 
         const cotacao = snapshot.val();
+        cotacaoAtual = cotacao;
         const produtos = cotacao.produtos;
-        const fornecedoresTotais = {}; // Armazena o total por fornecedor
-        const valorMinimo = {}; // Armazena valor mínimo exigido por fornecedor
 
-        let tabela = "<table><thead><tr><th>Produto</th><th>Fornecedor</th><th>Preço</th><th>Qtd</th><th>Total</th><th>Status</th></tr></thead><tbody>";
+        let tabela = "<table><thead><tr><th>Produto</th><th>Fornecedor</th><th>Preço</th><th>Qtd</th><th>Total</th></tr></thead><tbody>";
 
+        let index = 0;
         for (const codProd in produtos) {
           const info = produtos[codProd];
           const preco = parseFloat(info.preco || 0);
           const fornecedor = info.fornecedor || "---";
-          const quantidade = 10; // valor fictício para exemplo
-          const total = preco * quantidade;
 
-          if (!fornecedoresTotais[fornecedor]) fornecedoresTotais[fornecedor] = 0;
-          fornecedoresTotais[fornecedor] += total;
-
-          if (info.valorMinimoPedido) valorMinimo[fornecedor] = parseFloat(info.valorMinimoPedido);
+          dadosProdutos.push({
+            codProd,
+            fornecedor,
+            preco,
+            valorMinimoPedido: parseFloat(info.valorMinimoPedido || 0),
+            quantidade: 0
+          });
 
           tabela += `<tr>
             <td>${codProd}</td>
             <td>${fornecedor}</td>
             <td>R$ ${preco.toFixed(2)}</td>
-            <td>${quantidade}</td>
-            <td>R$ ${total.toFixed(2)}</td>
-            <td></td>
+            <td><input type='number' min='0' value='0' onchange='atualizarQtd(${index}, this.value)' /></td>
+            <td id='total-${index}'>R$ 0,00</td>
           </tr>`;
+
+          index++;
         }
 
-        tabela += "</tbody></table>";
+        tabela += "</tbody></table><br><button onclick='verificarTotais()'>Verificar Totais</button>";
         container.innerHTML = tabela;
-
-        for (const fornecedor in fornecedoresTotais) {
-          const total = fornecedoresTotais[fornecedor];
-          const minimo = valorMinimo[fornecedor] || 0;
-          if (total < minimo) {
-            const alerta = document.createElement("p");
-            alerta.innerHTML = `⚠ <span class='atencao'>Valor de pedido abaixo do mínimo indicado pelo fornecedor (${fornecedor}): R$ ${total.toFixed(2)} < R$ ${minimo.toFixed(2)}</span>`;
-            container.appendChild(alerta);
-          }
-        }
       });
+    }
+
+    function atualizarQtd(index, valor) {
+      dadosProdutos[index].quantidade = parseInt(valor);
+      const total = dadosProdutos[index].quantidade * dadosProdutos[index].preco;
+      document.getElementById(`total-${index}`).innerText = `R$ ${total.toFixed(2)}`;
+    }
+
+    function verificarTotais() {
+      const container = document.getElementById("resultado");
+      const msg = document.getElementById("mensagemSucesso");
+      msg.innerHTML = "";
+
+      const fornecedoresTotais = {};
+      const valorMinimo = {};
+
+      dadosProdutos.forEach(item => {
+        const total = item.quantidade * item.preco;
+        if (!fornecedoresTotais[item.fornecedor]) fornecedoresTotais[item.fornecedor] = 0;
+        fornecedoresTotais[item.fornecedor] += total;
+        valorMinimo[item.fornecedor] = item.valorMinimoPedido;
+      });
+
+      let algumAlerta = false;
+      for (const fornecedor in fornecedoresTotais) {
+        const total = fornecedoresTotais[fornecedor];
+        const minimo = valorMinimo[fornecedor] || 0;
+        if (total < minimo) {
+          algumAlerta = true;
+          const alerta = document.createElement("p");
+          alerta.innerHTML = `⚠ <span class='atencao'>Valor de pedido abaixo do mínimo indicado pelo fornecedor (${fornecedor}): R$ ${total.toFixed(2)} < R$ ${minimo.toFixed(2)}</span>`;
+          container.appendChild(alerta);
+        }
+      }
+
+      if (!algumAlerta) {
+        msg.innerHTML = "Obrigado pelo envio de sua cotação!<br>Nossa apuração é realizada via sistema!";
+      }
     }
   </script>
 </body>
