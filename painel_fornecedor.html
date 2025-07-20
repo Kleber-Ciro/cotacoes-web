@@ -1,123 +1,86 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel do Fornecedor</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 30px;
-      max-width: 700px;
-      margin: auto;
-      background-color: #f8f9fb;
-    }
-    h2 {
-      color: #0055ff;
-      margin-bottom: 20px;
-    }
-    .botao {
-      display: block;
-      width: 100%;
-      margin: 15px 0;
-      padding: 15px;
-      font-size: 16px;
-      background-color: #0055ff;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-    }
-    .botao:hover {
-      background-color: #003dcc;
-    }
-    .alerta {
-      padding: 15px;
-      background-color: #e8f4ff;
-      border-left: 6px solid #0055ff;
-      margin-bottom: 20px;
-      font-weight: bold;
-      color: #003e99;
-      border-radius: 8px;
-    }
-  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 </head>
 <body>
-  <h2>Bem-vindo ao Painel do Fornecedor</h2>
+  <h1>Painel do Fornecedor</h1>
 
-  <div id="alertaCotacao"></div>
+  <!-- Botão de preenchimento da cotação -->
+  <button id="btnPreencherCotacao">Preencher Cotacao</button>
 
-  <button class="botao" onclick="window.location.href='formulario_fornecedor.html'">
-    ✍️ Preencher Cotação
-  </button>
-
-  <button class="botao" onclick="abrirHistorico()">
-    📊 Ver Histórico de Cotações
-  </button>
-
-  <button class="botao" onclick="compartilharWhatsApp()">
-    📤 Compartilhar Cotação via WhatsApp
-  </button>
+  <!-- Outras opções do painel -->
+  <button onclick="window.location.href='historico_cotacoes.html'">Histórico de Cotações</button>
+  <button onclick="window.location.href='logout.html'">Sair</button>
 
   <script>
-    // Firebase
+    // Configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
       authDomain: "cotacoes---konect.firebaseapp.com",
       databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
       projectId: "cotacoes---konect",
       storageBucket: "cotacoes---konect.appspot.com",
-      messagingSenderId: "1037489090128",
-      appId: "1:1037489090128:web:09998d990338d15e276b55"
+      messagingSenderId: "",
+      appId: ""
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    // Verificação de cotação disponível
-    function verificarCotacaoDisponivel() {
-      const alertaDiv = document.getElementById("alertaCotacao");
-      const agora = new Date();
+    const auth = firebase.auth();
+    const database = firebase.database();
 
-      db.ref("cotacoes").limitToLast(1).once("value").then(snapshot => {
-        snapshot.forEach(cot => {
-          const horarioLimite = cot.val().horarioLimite || "23:59";
-          const [hora, minuto] = horarioLimite.split(":");
-          const limite = new Date();
-          limite.setHours(hora);
-          limite.setMinutes(minuto);
+    // Executa após o login
+    auth.onAuthStateChanged((user) => {
+      if (!user) {
+        alert("Usuário não autenticado. Redirecionando para o login.");
+        window.location.href = "formulario_fornecedor.html";
+      }
+    });
 
-          if (agora <= limite) {
-            alertaDiv.innerHTML = `<div class='alerta'>📢 Uma nova cotação está disponível para preenchimento!</div>`;
-          } else {
-            alertaDiv.innerHTML = "";
+    // Lógica do botão de preenchimento de cotação
+    document.getElementById("btnPreencherCotacao").addEventListener("click", function () {
+      const user = firebase.auth().currentUser;
+
+      if (!user) {
+        alert("Usuário não autenticado.");
+        return;
+      }
+
+      const now = new Date();
+      let encontrouCotacao = false;
+
+      firebase.database().ref("cotacoes").once("value")
+        .then((snapshot) => {
+          snapshot.forEach((childSnapshot) => {
+            const cotacao = childSnapshot.val();
+            const horarioLimite = new Date(cotacao.horarioLimite);
+
+            if (now <= horarioLimite && cotacao.status !== "fechada") {
+              encontrouCotacao = true;
+
+              // Salva o ID da cotação para uso posterior
+              localStorage.setItem("cotacaoId", childSnapshot.key);
+
+              // Redireciona para o preenchimento
+              window.location.href = "preencher_cotacao.html";
+              return true; // encerra o loop
+            }
+          });
+
+          if (!encontrouCotacao) {
+            alert("Nenhuma cotação disponível no momento.");
           }
+        })
+        .catch((error) => {
+          console.error("Erro ao buscar cotações:", error);
+          alert("Erro ao buscar cotações.");
         });
-      });
-    }
-
-    // Redirecionar histórico
-    function abrirHistorico() {
-      const codigo = localStorage.getItem("fornecedorCodigo");
-      if (!codigo) {
-        alert("Código do fornecedor não encontrado. Faça login novamente.");
-        return;
-      }
-      window.location.href = `historico_fornecedor.html?forn=${codigo}`;
-    }
-
-    // Compartilhar via WhatsApp
-    function compartilharWhatsApp() {
-      const fone = localStorage.getItem("fornecedorFone");
-      if (!fone) {
-        alert("WhatsApp não encontrado. Faça login novamente.");
-        return;
-      }
-      const msg = encodeURIComponent("Olá! Segue minha cotação preenchida.");
-      window.open(`https://wa.me/55${fone}?text=${msg}`, "_blank");
-    }
-
-    verificarCotacaoDisponivel();
+    });
   </script>
 </body>
 </html>
