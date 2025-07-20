@@ -36,6 +36,19 @@
       max-width: 600px;
       margin-top: 20px;
     }
+    #dashboardBtn {
+      margin-top: 30px;
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #0055ff;
+      color: white;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    #dashboardBtn:hover {
+      background-color: #003bb3;
+    }
   </style>
 </head>
 <body>
@@ -66,6 +79,8 @@
     <canvas id="graficoParticipacao"></canvas>
   </section>
 
+  <a href="dashboard.html" id="dashboardBtn">Voltar ao Dashboard</a>
+
   <script>
     const firebaseConfig = {
       apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
@@ -94,22 +109,18 @@
           for (const codProd in produtos) {
             const p = produtos[codProd];
 
-            // Histórico de compras
             if (p.comprado) {
               historico.push({ data, produto: codProd, fornecedor: p.fornecedor, preco: p.preco });
             }
 
-            // Ranking de preço médio
             if (!ranking[p.fornecedor]) ranking[p.fornecedor] = { total: 0, soma: 0 };
             ranking[p.fornecedor].total++;
             ranking[p.fornecedor].soma += p.preco;
 
-            // Participação no gráfico
             participacao[p.fornecedor] = (participacao[p.fornecedor] || 0) + 1;
           }
         });
 
-        // Tabela histórico
         const histBody = document.querySelector("#historicoGanhos tbody");
         histBody.innerHTML = "";
         historico.forEach(item => {
@@ -118,7 +129,6 @@
           histBody.appendChild(tr);
         });
 
-        // Tabela ranking
         const rankBody = document.querySelector("#ranking tbody");
         rankBody.innerHTML = "";
         Object.entries(ranking).sort((a, b) => (a[1].soma / a[1].total) - (b[1].soma / b[1].total))
@@ -128,7 +138,6 @@
             rankBody.appendChild(tr);
           });
 
-        // Gráfico de Rosca
         const ctx = document.getElementById('graficoParticipacao').getContext('2d');
         if (window.grafico) window.grafico.destroy();
         window.grafico = new Chart(ctx, {
@@ -152,3 +161,4 @@
   </script>
 </body>
 </html>
+
