@@ -1,59 +1,69 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Painel do Fornecedor</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 800px;
+      padding: 30px;
+      max-width: 700px;
       margin: auto;
+      background-color: #f8f9fb;
     }
     h2 {
       color: #0055ff;
-    }
-    .alerta {
-      background-color: #d4fcd4;
-      border-left: 6px solid green;
-      padding: 12px;
       margin-bottom: 20px;
-      font-weight: bold;
     }
-    .botoes {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    button {
-      padding: 12px;
+    .botao {
+      display: block;
+      width: 100%;
+      margin: 15px 0;
+      padding: 15px;
       font-size: 16px;
       background-color: #0055ff;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 10px;
       cursor: pointer;
     }
-    button:hover {
+    .botao:hover {
       background-color: #003dcc;
+    }
+    .alerta {
+      padding: 15px;
+      background-color: #e8f4ff;
+      border-left: 6px solid #0055ff;
+      margin-bottom: 20px;
+      font-weight: bold;
+      color: #003e99;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
   <h2>Bem-vindo ao Painel do Fornecedor</h2>
-  <div id="mensagemCotacao"></div>
 
-  <div class="botoes">
-    <button onclick="preencherCotacao()">📋 Preencher Cotação Disponível</button>
-    <button onclick="verHistorico()">📊 Ver Histórico de Cotações</button>
-    <button onclick="compartilharWhatsapp()">📤 Compartilhar Cotação via WhatsApp</button>
-  </div>
+  <div id="alertaCotacao"></div>
+
+  <button class="botao" onclick="window.location.href='formulario_fornecedor.html'">
+    ✍️ Preencher Cotação
+  </button>
+
+  <button class="botao" onclick="abrirHistorico()">
+    📊 Ver Histórico de Cotações
+  </button>
+
+  <button class="botao" onclick="compartilharWhatsApp()">
+    📤 Compartilhar Cotação via WhatsApp
+  </button>
 
   <script>
+    // Firebase
     const firebaseConfig = {
-      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
       authDomain: "cotacoes---konect.firebaseapp.com",
       databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
       projectId: "cotacoes---konect",
@@ -64,46 +74,47 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 🔍 Verifica cotação disponível com horário limite
+    // Verificação de cotação disponível
     function verificarCotacaoDisponivel() {
-      db.ref("cotacoes_disponiveis").once("value").then(snapshot => {
-        if (!snapshot.exists()) return;
+      const alertaDiv = document.getElementById("alertaCotacao");
+      const agora = new Date();
 
-        let cotacao = snapshot.val();
-        let horarioLimite = cotacao.horarioLimite || "23:59";
-        let agora = new Date();
-        let horaAtual = agora.toTimeString().substring(0,5);
+      db.ref("cotacoes").limitToLast(1).once("value").then(snapshot => {
+        snapshot.forEach(cot => {
+          const horarioLimite = cot.val().horarioLimite || "23:59";
+          const [hora, minuto] = horarioLimite.split(":");
+          const limite = new Date();
+          limite.setHours(hora);
+          limite.setMinutes(minuto);
 
-        if (horaAtual <= horarioLimite) {
-          document.getElementById("mensagemCotacao").innerHTML =
-            `<div class='alerta'>🟢 Nova cotação disponível para preenchimento até ${horarioLimite}!</div>`;
-        }
+          if (agora <= limite) {
+            alertaDiv.innerHTML = `<div class='alerta'>📢 Uma nova cotação está disponível para preenchimento!</div>`;
+          } else {
+            alertaDiv.innerHTML = "";
+          }
+        });
       });
     }
 
-    // ▶️ Ação do botão de preencher cotação
-    function preencherCotacao() {
-      window.location.href = "formulario_fornecedor_completo.html";
-    }
-
-    // 📈 Ação do botão de histórico
-    function verHistorico() {
-      const codigo = sessionStorage.getItem("codigoFornecedor") || prompt("Digite seu código de fornecedor:");
-      if (codigo) {
-        sessionStorage.setItem("codigoFornecedor", codigo);
-        window.location.href = "historico_fornecedor.html";
-      }
-    }
-
-    // 📲 Compartilhamento via WhatsApp
-    function compartilharWhatsapp() {
-      const telefone = sessionStorage.getItem("whatsappFornecedor");
-      if (!telefone) {
-        alert("Número do WhatsApp não encontrado.");
+    // Redirecionar histórico
+    function abrirHistorico() {
+      const codigo = localStorage.getItem("fornecedorCodigo");
+      if (!codigo) {
+        alert("Código do fornecedor não encontrado. Faça login novamente.");
         return;
       }
-      const mensagem = encodeURIComponent("Olá! Segue o link para preenchimento da cotação: https://kleber-ciro.github.io/cotacoes-web/formulario_fornecedor_completo.html");
-      window.open(`https://wa.me/55${telefone}?text=${mensagem}`, "_blank");
+      window.location.href = `historico_fornecedor.html?forn=${codigo}`;
+    }
+
+    // Compartilhar via WhatsApp
+    function compartilharWhatsApp() {
+      const fone = localStorage.getItem("fornecedorFone");
+      if (!fone) {
+        alert("WhatsApp não encontrado. Faça login novamente.");
+        return;
+      }
+      const msg = encodeURIComponent("Olá! Segue minha cotação preenchida.");
+      window.open(`https://wa.me/55${fone}?text=${msg}`, "_blank");
     }
 
     verificarCotacaoDisponivel();
