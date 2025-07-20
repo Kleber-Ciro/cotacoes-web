@@ -2,32 +2,67 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Criar Nova Cotação</title>
+  <title>Criar Cotação</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <link rel="stylesheet" href="estilo_login.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h2 {
+      color: #0055ff;
+    }
+    input, select {
+      padding: 8px;
+      width: 100%;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #0055ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #003fcc;
+    }
+    .voltar {
+      margin-top: 20px;
+      display: block;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Criar Nova Cotação</h2>
+  <h2>Criar Nova Cotação</h2>
 
-    <label>Descrição da Cotação:</label>
-    <input type="text" id="descricao" placeholder="Ex: Cotação Semana 1" required><br><br>
+  <label>Número da Cotação:</label>
+  <input type="text" id="numeroCotacao" readonly>
 
-    <label>Data da Cotação:</label>
-    <input type="date" id="dataCotacao" value="" required><br><br>
+  <label>Data da Cotação:</label>
+  <input type="date" id="dataCotacao" required>
 
-    <label>Horário Limite para Envio (Ex: 16:00):</label>
-    <input type="time" id="horaLimite" required><br><br>
+  <label>Horário Limite de Envio:</label>
+  <input type="time" id="horarioLimite" required>
 
-    <label>Selecionar Produtos:</label><br>
-    <select id="produtos" multiple size="6" style="width: 100%;"></select><br><br>
+  <h3>Produtos para Cotação:</h3>
+  <div id="listaProdutos"></div>
 
-    <button onclick="salvarCotacao()">Salvar Cotação</button>
-    <button onclick="window.location.href='formulario_varejista.html'" style="background-color: gray;">Voltar ao Menu</button>
+  <button onclick="salvarCotacao()">Salvar Cotação</button>
+
+  <div class="voltar">
+    <a href="formulario_varejista.html">🔙 Voltar ao menu</a>
   </div>
 
   <script>
+    // Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
       authDomain: "cotacoes---konect.firebaseapp.com",
@@ -40,68 +75,69 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    document.getElementById("dataCotacao").valueAsDate = new Date();
+    // Gera número da cotação automaticamente
+    document.getElementById("numeroCotacao").value = "COT-" + Date.now();
 
+    // Carrega produtos do banco
     function carregarProdutos() {
-      const select = document.getElementById("produtos");
-      select.innerHTML = "";
-      db.ref("produtos").once("value", (snapshot) => {
-        snapshot.forEach((child) => {
-          const item = child.val();
-          const option = document.createElement("option");
-          option.value = child.key;
-          option.textContent = `${item.descricao} (${item.unidadeCompra})`;
-          select.appendChild(option);
+      const container = document.getElementById("listaProdutos");
+      db.ref("produtos").once("value").then(snapshot => {
+        snapshot.forEach(prod => {
+          const p = prod.val();
+          const div = document.createElement("div");
+          div.innerHTML = `
+            <label>
+              <input type="checkbox" value="${prod.key}">
+              ${p.descricao} (${p.unidadeCompra})
+            </label><br>
+          `;
+          container.appendChild(div);
         });
       });
     }
 
-    function gerarCodigoCotacao(callback) {
-      db.ref("cotacoes").once("value", (snapshot) => {
-        const count = snapshot.numChildren() + 1;
-        const codigo = `COT-${String(count).padStart(3, '0')}`;
-        callback(codigo);
-      });
-    }
+    carregarProdutos();
 
     function salvarCotacao() {
-      const descricao = document.getElementById("descricao").value;
+      const numero = document.getElementById("numeroCotacao").value;
       const data = document.getElementById("dataCotacao").value;
-      const horaLimite = document.getElementById("horaLimite").value;
-      const produtosSelecionados = Array.from(document.getElementById("produtos").selectedOptions).map(opt => opt.value);
+      const horario = document.getElementById("horarioLimite").value;
 
-      if (!descricao || !data || !horaLimite || produtosSelecionados.length === 0) {
-        alert("Preencha todos os campos obrigatórios.");
+      const selecionados = Array.from(document.querySelectorAll("#listaProdutos input:checked")).map(input => input.value);
+
+      if (!data || !horario || selecionados.length === 0) {
+        alert("Preencha todos os campos e selecione pelo menos um produto.");
         return;
       }
 
-      gerarCodigoCotacao((codigo) => {
-        const novaCotacao = {
-          codigo,
-          descricao,
-          data,
-          horaLimite,
-          produtos: produtosSelecionados,
-          timestamp: Date.now()
-        };
+      const cotacao = {
+        numero,
+        data,
+        horarioLimite: horario,
+        produtos: {}
+      };
 
-        db.ref("cotacoes/" + codigo).set(novaCotacao)
-          .then(() => {
-            alert("Cotação criada com sucesso!");
-            notificarFornecedoresWhatsApp(codigo, descricao, data);
-          })
-          .catch((error) => {
-            console.error("Erro ao salvar:", error);
-            alert("Erro ao salvar cotação.");
-          });
+      selecionados.forEach(cod => {
+        cotacao.produtos[cod] = {
+          status: "aguardando"
+        };
       });
+
+      db.ref("cotacoes/" + numero).set(cotacao)
+        .then(() => {
+          alert("Cotação salva com sucesso!");
+          notificarFornecedoresWhatsApp(numero, "Produtos disponíveis para cotação", data);
+        })
+        .catch(err => {
+          alert("Erro ao salvar: " + err.message);
+        });
     }
 
     function notificarFornecedoresWhatsApp(codigo, descricao, data) {
       db.ref("fornecedores").once("value").then(snapshot => {
         snapshot.forEach(fornecedor => {
           const info = fornecedor.val();
-          if (info.fone) {
+          if (info.ativo !== false && info.fone) {
             const telefone = info.fone.replace(/\D/g, '');
             const mensagem = `Olá! Uma nova cotação (${descricao}) foi aberta com data ${data}. Acesse para preencher: https://seusite.com.br/login_fornecedor.html`;
             const link = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
@@ -114,8 +150,6 @@
         }, 2000);
       });
     }
-
-    window.onload = carregarProdutos;
   </script>
 </body>
 </html>
