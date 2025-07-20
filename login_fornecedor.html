@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Fornecedor</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      color: #0055ff;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      background-color: #0055ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #003dcc;
+    }
+    .erro {
+      color: red;
+      margin-top: 15px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h2>Login Fornecedor</h2>
+    <label for="codigo">Código do Fornecedor:</label>
+    <input type="text" id="codigo" placeholder="Ex: FORN-123" required>
+
+    <label for="senha">Senha:</label>
+    <input type="password" id="senha" placeholder="Mínimo 6 caracteres" required>
+
+    <button onclick="fazerLogin()">Entrar</button>
+    <div class="erro" id="mensagemErro"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function fazerLogin() {
+      const codigo = document.getElementById("codigo").value.trim();
+      const senha = document.getElementById("senha").value.trim();
+      const erro = document.getElementById("mensagemErro");
+      erro.innerText = "";
+
+      if (codigo.length < 6 || senha.length < 6) {
+        erro.innerText = "Preencha todos os campos corretamente.";
+        return;
+      }
+
+      db.ref("fornecedores/" + codigo).once("value").then(snapshot => {
+        const dados = snapshot.val();
+        if (dados && dados.senha === senha) {
+          localStorage.setItem("codigoFornecedor", codigo);
+          window.location.href = "painel_fornecedor.html";
+        } else {
+          erro.innerText = "Código ou senha incorretos.";
+        }
+      }).catch(() => {
+        erro.innerText = "Erro ao conectar. Tente novamente.";
+      });
+    }
+  </script>
+</body>
+</html>
