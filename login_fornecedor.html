@@ -1,78 +1,55 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Login do Fornecedor</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f8f8f8;
+      background-color: #f5f5f5;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
-      margin: 0;
     }
-    h2 {
-      color: #0047FF;
-      margin-bottom: 20px;
-    }
-    .container {
+    .login-container {
       background: white;
-      padding: 40px;
+      padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       text-align: center;
-      width: 90%;
-      max-width: 400px;
     }
     input {
+      display: block;
       width: 100%;
-      padding: 12px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
+      padding: 10px;
+      margin: 10px 0;
     }
     button {
-      width: 100%;
-      padding: 12px;
-      background-color: #0047FF;
+      padding: 10px 20px;
+      background-color: #007bff;
       color: white;
       border: none;
-      border-radius: 6px;
-      font-size: 16px;
+      border-radius: 5px;
       cursor: pointer;
-      margin-bottom: 10px;
     }
-    button:hover {
-      background-color: #0033cc;
-    }
-    .link {
-      margin-top: 10px;
-      color: #0047FF;
-      font-size: 14px;
-      text-decoration: underline;
-      cursor: pointer;
+    a {
       display: block;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="login-container">
     <h2>Login do Fornecedor</h2>
-    <input type="text" id="codigoFornecedor" placeholder="Ex: FORN-001" />
-    <input type="password" id="senhaFornecedor" placeholder="Mínimo 6 caracteres" />
-    <button onclick="loginFornecedor()">Entrar</button>
-    <a class="link" href="formulario_fornecedor.html">Criar primeiro acesso</a>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="senha" placeholder="Senha">
+    <button id="btnLogin">Entrar</button>
+    <a href="cadastro_fornecedor.html" id="linkPrimeiroAcesso">Criar primeiro acesso</a>
   </div>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -81,36 +58,30 @@
       databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
       projectId: "cotacoes---konect",
       storageBucket: "cotacoes---konect.appspot.com",
-      messagingSenderId: "1037489090128",
-      appId: "1:1037489090128:web:09998d990338d15e276b55"
+      messagingSenderId: "",
+      appId: ""
     };
     firebase.initializeApp(firebaseConfig);
 
-    function loginFornecedor() {
-      const codigo = document.getElementById("codigoFornecedor").value.trim();
-      const senha = document.getElementById("senhaFornecedor").value.trim();
+    const auth = firebase.auth();
 
-      if (!codigo || senha.length < 6) {
-        alert("Preencha todos os campos corretamente.");
+    document.getElementById("btnLogin").addEventListener("click", function () {
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+
+      if (!email || !senha) {
+        alert("Preencha todos os campos.");
         return;
       }
 
-      const db = firebase.database();
-      db.ref("fornecedores").orderByChild("codigo").equalTo(codigo).once("value", snapshot => {
-        if (snapshot.exists()) {
-          const data = Object.values(snapshot.val())[0];
-          firebase.auth().signInWithEmailAndPassword(data.email, senha)
-            .then(() => {
-              window.location.href = "formulario_fornecedor.html";
-            })
-            .catch((error) => {
-              alert("Erro ao fazer login: " + error.message);
-            });
-        } else {
-          alert("Código não encontrado.");
-        }
-      });
-    }
+      auth.signInWithEmailAndPassword(email, senha)
+        .then((userCredential) => {
+          window.location.href = "painel_fornecedor.html"; // Redireciona para o painel do fornecedor
+        })
+        .catch((error) => {
+          alert("Erro ao logar: " + error.message);
+        });
+    });
   </script>
 </body>
 </html>
