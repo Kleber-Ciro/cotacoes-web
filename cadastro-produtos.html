@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Cadastro de Produtos</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    h2 {
+      color: #0055ff;
+    }
+    label {
+      display: block;
+      margin-top: 12px;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .botao-salvar {
+      margin-top: 20px;
+      padding: 12px;
+      background-color: #0055ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .botao-salvar:hover {
+      background-color: #003dcc;
+    }
+    .oculto {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>Cadastro de Produtos</h2>
+
+  <form id="formProduto">
+    <label>Código do Produto:</label>
+    <input type="text" id="codigo" readonly>
+
+    <label>Descrição:</label>
+    <input type="text" id="descricao" required>
+
+    <label>Tipo:</label>
+    <select id="tipo">
+      <option value="seco">Seco</option>
+      <option value="perecivel">Perecível</option>
+    </select>
+
+    <label>EAN (opcional):</label>
+    <input type="text" id="ean">
+
+    <label>DUN (opcional):</label>
+    <input type="text" id="dun">
+
+    <label>Unidade de Compra:</label>
+    <select id="unidadeCompra" required>
+      <option value="">Selecione</option>
+      <option value="Cx">Cx</option>
+      <option value="Kg">Kg</option>
+      <option value="Unidade">Unidade</option>
+    </select>
+
+    <div id="campoQtdCx" class="oculto">
+      <label>Quantidade por Caixa:</label>
+      <input type="number" id="qtdCx" min="1">
+    </div>
+
+    <label>Foto do Produto (opcional):</label>
+    <input type="file" id="foto" accept="image/*">
+
+    <button type="submit" class="botao-salvar">Salvar Produto</button>
+  </form>
+
+  <script>
+    // 🔧 CONFIGURAR SEU PROJETO FIREBASE AQUI:
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SUA_AUTH_DOMAIN",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Gera código automático no início
+    document.getElementById('codigo').value = 'PRD-' + Date.now();
+
+    // Exibe ou esconde campo "qtd por caixa"
+    document.getElementById('unidadeCompra').addEventListener('change', function () {
+      const campo = document.getElementById('campoQtdCx');
+      campo.classList.toggle('oculto', this.value !== 'Cx');
+    });
+
+    // Ao enviar o formulário
+    document.getElementById('formProduto').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const codigo = document.getElementById('codigo').value;
+      const descricao = document.getElementById('descricao').value;
+      const tipo = document.getElementById('tipo').value;
+      const ean = document.getElementById('ean').value;
+      const dun = document.getElementById('dun').value;
+      const unidadeCompra = document.getElementById('unidadeCompra').value;
+      const qtdCx = document.getElementById('qtdCx').value || null;
+
+      if (unidadeCompra === "Cx" && !qtdCx) {
+        alert("Informe a quantidade por caixa.");
+        return;
+      }
+
+      const novoProduto = {
+        codigo,
+        descricao,
+        tipo,
+        ean,
+        dun,
+        unidadeCompra,
+        qtdCx
+      };
+
+      db.ref("produtos/" + codigo).set(novoProduto)
+        .then(() => {
+          alert("Produto salvo com sucesso!");
+          document.getElementById("formProduto").reset();
+          document.getElementById('codigo').value = 'PRD-' + Date.now();
+          document.getElementById('campoQtdCx').classList.add('oculto');
+        })
+        .catch(error => {
+          console.error("Erro ao salvar:", error);
+          alert("Erro ao salvar produto.");
+        });
+    });
+  </script>
+</body>
+</html>
