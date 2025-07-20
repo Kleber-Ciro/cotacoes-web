@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alterar Senha do Administrador</title>
+  <link rel="stylesheet" href="estilo_login.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>Primeiro Acesso - Alterar Login e Senha</h2>
+
+    <label for="novoLogin">Novo Login:</label>
+    <input type="text" id="novoLogin" placeholder="Mínimo 6 caracteres" required>
+
+    <label for="novaSenha">Nova Senha:</label>
+    <input type="password" id="novaSenha" placeholder="Mínimo 6 caracteres" required>
+
+    <button onclick="salvarNovaSenha()">Salvar</button>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Configuração Firebase -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  </script>
+
+  <!-- Função para salvar nova senha -->
+  <script>
+    function salvarNovaSenha() {
+      const novoLogin = document.getElementById("novoLogin").value.trim();
+      const novaSenha = document.getElementById("novaSenha").value.trim();
+
+      if (novoLogin.length < 6 || novaSenha.length < 6) {
+        alert("Login e senha devem ter no mínimo 6 caracteres.");
+        return;
+      }
+
+      firebase.database().ref("admin").set({
+        login: novoLogin,
+        senha: novaSenha
+      }).then(() => {
+        alert("Login e senha atualizados com sucesso!");
+        window.location.href = "formulario_varejista.html";
+      }).catch((error) => {
+        alert("Erro ao atualizar dados: " + error.message);
+      });
+    }
+  </script>
+</body>
+</html>
