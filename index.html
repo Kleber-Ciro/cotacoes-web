@@ -2,50 +2,35 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Acesso ao Sistema</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f3f3f3; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-    .login-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-    h2 { text-align: center; color: #333; }
-    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; }
-    button { background-color: #007BFF; color: white; font-weight: bold; border: none; cursor: pointer; }
-    button:hover { background-color: #0056b3; }
-    .link { text-align: center; margin-top: 10px; }
-    .link a { color: #007BFF; text-decoration: none; }
-    img.logo { display: block; margin: 0 auto 20px; max-width: 180px; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Tela de Login</title>
+  <link rel="stylesheet" href="assets/estilo_login.css">
 </head>
 <body>
+<div style="text-align:center;"><img src="assets/logo.png" alt="Logo" style="max-height: 100px;"></div>
   <div class="login-container">
-    <img src="assets/sk (1).png" alt="Logo" class="logo" />
-    <h2>Login do Sistema</h2>
-    <form id="loginForm">
-      <input type="email" id="email" placeholder="E-mail" required />
-      <input type="password" id="senha" placeholder="Senha" required />
-      <select id="perfil" required>
-        <option value="">Selecione o tipo de acesso</option>
-        <option value="admin">Admin (Varejista)</option>
-        <option value="fornecedor">Fornecedor</option>
-      </select>
+    <h2>Acesso à Plataforma</h2>
+    <p style="color: red; text-align:center;">Após o primeiro acesso, será obrigatório alterar a senha.</p>
+<form id="loginForm">
+      <input type="text" id="usuario" placeholder="Usuário" required>
+      <input type="password" id="senha" placeholder="Senha" required>
       <button type="submit">Entrar</button>
     </form>
-    <div class="link">
-      <a href="cadastro_usuario_configurado.html">Criar primeiro acesso</a>
-    </div>
+    <p id="erroLogin" style="color: red;"></p>
   </div>
 
   <script>
-    document.getElementById("loginForm").addEventListener("submit", function(e) {
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      const perfil = document.getElementById("perfil").value;
-      if (perfil === "admin") {
-        window.location.href = "painel_cotacoes_varejista.html";
-      } else if (perfil === "fornecedor") {
-        window.location.href = "formulario_fornecedor.html";
+      const user = document.getElementById('usuario').value;
+      const pass = document.getElementById('senha').value;
+
+      if(user === "admin" && pass === "1234") {
+        window.location.href = "admin/painel_admin.html";
+      } else if(user === "fornecedor" && pass === "1234") {
+        window.location.href = "fornecedor/painel_fornecedor.html";
       } else {
-        alert("Por favor, selecione um tipo de acesso.");
+        document.getElementById("erroLogin").innerText = "Usuário ou senha inválidos";
       }
     });
   </script>
