@@ -92,6 +92,7 @@
   </form>
 
   <script>
+    // Firebase config do seu projeto
     const firebaseConfig = {
       apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
       authDomain: "cotacoes---konect.firebaseapp.com",
@@ -104,12 +105,58 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // Gera código automático
     document.getElementById('codigo').value = 'PRD-' + Date.now();
 
+    // Mostra/oculta campo de quantidade por caixa
     document.getElementById('unidadeCompra').addEventListener('change', function () {
       const campo = document.getElementById('campoQtdCx');
       campo.classList.toggle('oculto', this.value !== 'Cx');
     });
 
+    // Ao salvar produto
     document.getElementById('formProduto').addEventListener('submit', function (e) {
       e.preventDefault();
+
+      const codigo = document.getElementById('codigo').value;
+      const descricao = document.getElementById('descricao').value;
+      const tipo = document.getElementById('tipo').value;
+      const ean = document.getElementById('ean').value;
+      const dun = document.getElementById('dun').value;
+      const unidadeCompra = document.getElementById('unidadeCompra').value;
+      const qtdCx = document.getElementById('qtdCx').value || null;
+      const preco = parseFloat(document.getElementById('preco').value);
+      const ultimoPreco = document.getElementById('ultimoPreco').value;
+
+      if (unidadeCompra === "Cx" && !qtdCx) {
+        alert("Informe a quantidade por caixa.");
+        return;
+      }
+
+      const novoProduto = {
+        codigo,
+        descricao,
+        tipo,
+        ean,
+        dun,
+        unidadeCompra,
+        qtdCx,
+        preco,
+        ultimoPreco
+      };
+
+      db.ref("produtos/" + codigo).set(novoProduto)
+        .then(() => {
+          alert("Produto salvo com sucesso!");
+          document.getElementById("formProduto").reset();
+          document.getElementById('codigo').value = 'PRD-' + Date.now();
+          document.getElementById('campoQtdCx').classList.add('oculto');
+        })
+        .catch(error => {
+          console.error("Erro ao salvar:", error);
+          alert("Erro ao salvar produto.");
+        });
+    });
+  </script>
+</body>
+</html>
