@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Preencher Cotação</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    h2 { color: #0055ff; }
+    .produto { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; }
+    input { width: 100%; margin-bottom: 10px; padding: 6px; }
+    button { padding: 10px 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>Preencher Cotação Disponível</h2>
+  <div id="formulario"></div>
+  <button onclick="enviarCotacao()">Enviar Cotação</button>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    const cotacaoId = localStorage.getItem("cotacaoDisponivelId");
+    if (!cotacaoId) {
+      document.getElementById("formulario").innerHTML = "<p style='color:red;'>Nenhuma cotação disponível para preenchimento.</p>";
+      throw new Error("Nenhuma cotação ativa.");
+    }
+
+    let userId;
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        userId = user.uid;
+        carregarCotacao();
+      } else {
+        window.location.href = "login_fornecedor.html";
+      }
+    });
+
+    function carregarCotacao() {
+      db.ref("cotacoes/" + cotacaoId + "/produtos").once("value").then(snapshot => {
+        const container = document.getElementById("formulario");
+        container.innerHTML = "";
+        snapshot.forEach(prodSnap => {
+          const prod = prodSnap.val();
+          const codigo = prodSnap.key;
+
+          const div = document.createElement("div");
+          div.className = "produto";
+          div.innerHTML = `
+            <input type="hidden" name="codigo" value="${codigo}">
+            <label>${prod.descricao}</label>
+            <label>Marca:</label>
+            <input type="text" name="marca-${codigo}" required>
+            <label>Embalagem:</label>
+            <input type="text" name="embalagem-${codigo}" required>
+            <label>Quantidade:</label>
+            <input type="number" name="quantidade-${codigo}" required>
+            <label>Preço Unitário (R$):</label>
+            <input type="number" step="0.01" name="preco-${codigo}" required>
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    function enviarCotacao() {
+      const respostas = {};
+      const inputs = document.querySelectorAll(".produto");
+
+      inputs.forEach(div => {
+        const codigo = div.querySelector("input[name^='codigo']").value;
+        const marca = div.querySelector(`input[name='marca-${codigo}']`).value;
+        const embalagem = div.querySelector(`input[name='embalagem-${codigo}']`).value;
+        const quantidade = div.querySelector(`input[name='quantidade-${codigo}']`).value;
+        const preco = div.querySelector(`input[name='preco-${codigo}']`).value;
+
+        respostas[codigo] = { marca, embalagem, quantidade, preco };
+      });
+
+      db.ref("cotacoes/" + cotacaoId + "/respostas/" + userId).set(respostas)
+        .then(() => {
+          alert("Cotação enviada com sucesso!");
+          window.location.href = "painel_fornecedor.html";
+        })
+        .catch(err => alert("Erro ao enviar: " + err.message));
+    }
+  </script>
+</body>
+</html>
