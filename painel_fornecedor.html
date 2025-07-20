@@ -2,68 +2,50 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Histórico do Fornecedor</title>
+  <title>Painel do Fornecedor</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
-      max-width: 1000px;
+      max-width: 800px;
       margin: auto;
     }
     h2 {
       color: #0055ff;
     }
-    input, button {
-      padding: 6px;
-      margin: 8px;
+    .alerta {
+      padding: 12px;
+      background-color: #fffae6;
+      border-left: 6px solid #ffc107;
+      margin-bottom: 20px;
+      font-weight: bold;
     }
-    table {
+    .botoes button {
+      display: block;
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
+      padding: 12px;
+      margin: 10px 0;
+      background-color: #0055ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
     }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background-color: #f0f0f0;
-    }
-    .vencedor {
-      color: green;
-      font-weight: bold;
-    }
-    .nao-vencedor {
-      color: red;
-      font-weight: bold;
-    }
-    .menu {
-      margin-top: 20px;
-    }
-    .menu a {
-      margin-right: 15px;
-      text-decoration: none;
-      color: #0055ff;
-      font-weight: bold;
+    .botoes button:hover {
+      background-color: #0041c4;
     }
   </style>
 </head>
 <body>
-  <h2>Histórico do Fornecedor</h2>
-
-  <label>Código do Fornecedor:</label>
-  <input type="text" id="codigoFornecedor" placeholder="Ex: FORN-123">
-  <button onclick="carregarHistorico()">Ver Histórico</button>
-
-  <div class="menu">
-    <a href="painel_fornecedor.html">🏠 Voltar ao Painel do Fornecedor</a>
+  <h2>Bem-vindo ao Painel do Fornecedor</h2>
+  <div id="alertaCotacao"></div>
+  <div class="botoes">
+    <button onclick="window.location.href='preencher_cotacao.html'" id="btnPreencherCotacao" style="display:none">Preencher Cotacao Disponível</button>
+    <button onclick="window.location.href='historico_fornecedor.html'">Ver Histórico de Cotações</button>
   </div>
-
-  <div id="resultado"></div>
-  <div id="mensagemFinal"></div>
 
   <script>
     const firebaseConfig = {
@@ -78,69 +60,44 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function carregarHistorico() {
-      const codForn = document.getElementById("codigoFornecedor").value.trim();
-      const resultado = document.getElementById("resultado");
-      const mensagemFinal = document.getElementById("mensagemFinal");
-      resultado.innerHTML = "";
-      mensagemFinal.innerHTML = "";
+    const codForn = localStorage.getItem("codigoFornecedor");
 
-      if (!codForn) {
-        resultado.innerHTML = "<p style='color:red'>Informe o código do fornecedor.</p>";
-        return;
-      }
+    function verificarCotacaoDisponivel() {
+      const alertaDiv = document.getElementById("alertaCotacao");
+      const botao = document.getElementById("btnPreencherCotacao");
 
       db.ref("cotacoes").once("value").then(snapshot => {
-        let html = "<table><thead><tr><th>Data</th><th>Produto</th><th>Preço</th><th>Status</th><th>Ranking</th></tr></thead><tbody>";
-        let venceuAlgum = false;
+        let encontrou = false;
+        const agora = new Date();
 
         snapshot.forEach(cot => {
-          const data = cot.val().data;
-          const produtos = cot.val().produtos;
+          const dados = cot.val();
+          const horarioLimite = dados.horarioLimite || "23:59";
+          const dataCot = new Date(dados.data + 'T' + horarioLimite);
 
-          if (!produtos) return;
-
-          for (const codProd in produtos) {
-            const todosFornecedores = [];
-
-            for (const outroProd in produtos) {
-              if (outroProd === codProd) {
-                const info = produtos[outroProd];
-                todosFornecedores.push({
-                  fornecedor: info.fornecedor,
-                  preco: parseFloat(info.preco)
-                });
+          if (agora <= dataCot && dados.produtos) {
+            for (const cod in dados.produtos) {
+              if (dados.produtos[cod].fornecedor === codForn) {
+                encontrou = true;
+                break;
               }
-            }
-
-            todosFornecedores.sort((a, b) => a.preco - b.preco);
-            const fornecedorAtual = produtos[codProd];
-
-            if (fornecedorAtual && fornecedorAtual.fornecedor === codForn) {
-              const venceu = (todosFornecedores[0].fornecedor === codForn);
-              if (venceu) venceuAlgum = true;
-              const ranking = todosFornecedores.findIndex(f => f.fornecedor === codForn) + 1;
-
-              html += `<tr>
-                <td>${data}</td>
-                <td>${codProd}</td>
-                <td>R$ ${parseFloat(fornecedorAtual.preco).toFixed(2)}</td>
-                <td class="${venceu ? 'vencedor' : 'nao-vencedor'}">${venceu ? "VENCEDOR ✅" : "NÃO VENCEU ❌"}</td>
-                <td>${ranking}º</td>
-              </tr>`;
             }
           }
         });
 
-        html += "</tbody></table>";
-        resultado.innerHTML = html;
-
-        if (venceuAlgum) {
-          mensagemFinal.innerHTML = "<p style='color:green; font-weight:bold;'>🎉 Parabéns! Você venceu em uma ou mais cotações.</p>";
+        if (encontrou) {
+          alertaDiv.innerHTML = '<div class="alerta">\u26A0\ufe0f Uma nova cotação está disponível para preenchimento!</div>';
+          botao.style.display = 'block';
         } else {
-          mensagemFinal.innerHTML = "<p style='color:blue;'>Obrigado por participar. Continue enviando suas cotações!</p>";
+          alertaDiv.innerHTML = '<p style="color:gray">Nenhuma cotação disponível no momento.</p>';
         }
       });
+    }
+
+    if (codForn) {
+      verificarCotacaoDisponivel();
+    } else {
+      document.body.innerHTML = '<p style="color:red">Erro: Nenhum fornecedor logado. Acesse novamente o sistema.</p>';
     }
   </script>
 </body>
