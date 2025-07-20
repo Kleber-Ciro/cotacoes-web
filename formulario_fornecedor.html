@@ -1,157 +1,184 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Resposta de Cotação - Fornecedor</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 800px;
-      margin: auto;
-    }
-    h2 {
-      color: #0055ff;
-    }
-    label {
-      display: block;
-      margin-top: 12px;
-    }
-    input, select, textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      margin-top: 20px;
-      padding: 12px;
-      background-color: #0055ff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #003dcc;
-    }
-    #status {
-      margin-top: 15px;
-      font-weight: bold;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Formulário de Cotação - Fornecedor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+        }
+        h2 { color: #0055ff; }
+        input, textarea, select, button {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #0055ff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #003fbb;
+        }
+        #alertaCotacao {
+            color: green;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+    </style>
 </head>
 <body>
-  <h2>Formulário de Cotacão - Fornecedor</h2>
-  <form id="cotacaoForm">
-    <label>Número da Cotacão:</label>
-    <input type="text" id="numero_cotacao" readonly>
+    <h2>Formulário de Cotação - Fornecedor</h2>
 
-    <label>Razão Social do Fornecedor:</label>
-    <input type="text" id="fornecedor" required>
+    <div id="alertaCotacao"></div>
 
-    <label>CNPJ:</label>
-    <input type="text" id="cnpj" required>
+    <form id="cotacaoForm">
+        <input type="text" id="numero_cotacao" readonly>
+        <input type="text" id="fornecedor" placeholder="Nome do Fornecedor" required>
+        <input type="text" id="cnpj" placeholder="CNPJ" required>
+        <input type="text" id="vendedor" placeholder="Nome do Vendedor" required>
+        <input type="tel" id="fone" placeholder="WhatsApp (11999999999)" required>
+        <input type="tel" id="telefone_fixo" placeholder="Telefone Fixo (opcional)">
+        <input type="email" id="email" placeholder="E-mail" required>
+        <input type="date" id="data_entrega" required>
+        <input type="text" id="prazo" placeholder="Prazo de Pagamento" required>
+        <input type="date" id="validade_preco" placeholder="Validade do Preço" required>
+        <input type="number" id="valor_minimo" placeholder="Valor Mínimo para Pedido (R$)" required>
 
-    <label>Vendedor:</label>
-    <input type="text" id="vendedor" required>
+        <input type="text" id="produto_nome" placeholder="Nome do Produto" required>
+        <input type="text" id="produto_embalagem" placeholder="Embalagem" required>
+        <input type="text" id="produto_marca" placeholder="Marca" required>
+        <input type="number" id="produto_qtd" placeholder="Quantidade" required>
+        <input type="number" id="produto_valor" placeholder="Valor Unitário" step="0.01" required>
 
-    <label>WhatsApp:</label>
-    <input type="text" id="fone" required>
+        <textarea id="observacao" maxlength="125" placeholder="Observação (até 125 caracteres)"></textarea>
 
-    <label>Email:</label>
-    <input type="email" id="email" required>
+        <label>Anexar tabloide (JPEG/PNG):
+            <input type="file" id="imagem_tabloide" accept="image/png, image/jpeg">
+        </label>
 
-    <label>Prazo de Pagamento:</label>
-    <input type="text" id="prazo" required>
+        <button type="submit">Enviar Cotação</button>
+        <button type="button" onclick="compartilharWhatsApp()">Compartilhar via WhatsApp</button>
+        <button type="button" onclick="gerarPDF()">Salvar em PDF</button>
+    </form>
 
-    <label>Data de Entrega Prevista:</label>
-    <input type="date" id="data_entrega" required>
+    <p id="status"></p>
 
-    <label>Valor Mínimo para Pedido (R$):</label>
-    <input type="number" step="0.01" id="valor_minimo" required>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+            authDomain: "cotacoes---konect.firebaseapp.com",
+            databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+            projectId: "cotacoes---konect",
+            storageBucket: "cotacoes---konect.appspot.com",
+            messagingSenderId: "1037489090128",
+            appId: "1:1037489090128:web:09998d990338d15e276b55"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const storage = firebase.storage();
 
-    <label>Observação (até 125 caracteres):</label>
-    <textarea id="observacao" maxlength="125"></textarea>
-
-    <label>Enviar tabloide (PNG ou JPEG):</label>
-    <input type="file" id="tabloide" accept="image/png, image/jpeg">
-
-    <button type="submit">Enviar Cotacão</button>
-  </form>
-
-  <div id="status"></div>
-
-  <script>
-    const firebaseConfig = {
-      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
-      authDomain: "cotacoes---konect.firebaseapp.com",
-      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
-      projectId: "cotacoes---konect",
-      storageBucket: "cotacoes---konect.appspot.com",
-      messagingSenderId: "1037489090128",
-      appId: "1:1037489090128:web:09998d990338d15e276b55"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const storage = firebase.storage();
-
-    document.getElementById("numero_cotacao").value = "CT" + Date.now();
-
-    firebase.auth().onAuthStateChanged(user => {
-      if (!user) {
-        alert("Você precisa estar logado para acessar este formulário.");
-        window.location.href = "login_fornecedor.html";
-        return;
-      }
-
-      const uid = user.uid;
-      const form = document.getElementById("cotacaoForm");
-      const status = document.getElementById("status");
-
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        const file = document.getElementById("tabloide").files[0];
-        const storageRef = storage.ref(`tabloides/${uid}/${Date.now()}_${file?.name}`);
-
-        const cotacao = {
-          numero: document.getElementById("numero_cotacao").value,
-          data: new Date().toISOString().split('T')[0],
-          fornecedor: document.getElementById("fornecedor").value,
-          cnpj: document.getElementById("cnpj").value,
-          vendedor: document.getElementById("vendedor").value,
-          fone: document.getElementById("fone").value,
-          email: document.getElementById("email").value,
-          prazo: document.getElementById("prazo").value,
-          data_entrega: document.getElementById("data_entrega").value,
-          valor_minimo: parseFloat(document.getElementById("valor_minimo").value),
-          observacao: document.getElementById("observacao").value,
-          uid: uid
+        window.onload = function () {
+            auth.onAuthStateChanged(user => {
+                if (!user) {
+                    window.location.href = "login_fornecedor.html";
+                } else {
+                    verificarCotacaoDisponivel();
+                }
+            });
+            document.getElementById("numero_cotacao").value = "CT" + Date.now();
         };
 
-        if (file) {
-          storageRef.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => {
-            cotacao.tabloide = url;
-            return db.ref("cotacoes").push(cotacao);
-          }).then(() => {
-            status.innerText = "Cotacão enviada com sucesso com tabloide!";
-            form.reset();
-          }).catch(err => status.innerText = "Erro ao enviar: " + err.message);
-        } else {
-          db.ref("cotacoes").push(cotacao).then(() => {
-            status.innerText = "Cotacão enviada com sucesso!";
-            form.reset();
-          }).catch(err => status.innerText = "Erro ao enviar: " + err.message);
+        function verificarCotacaoDisponivel() {
+            db.ref("cotacoes").once("value").then(snapshot => {
+                let alerta = document.getElementById("alertaCotacao");
+                let existe = false;
+                snapshot.forEach(cot => {
+                    const limite = cot.val().horarioLimite;
+                    const agora = new Date();
+                    const [hora, minuto] = limite.split(":");
+                    const limiteData = new Date();
+                    limiteData.setHours(hora);
+                    limiteData.setMinutes(minuto);
+                    if (agora <= limiteData) {
+                        existe = true;
+                    }
+                });
+                if (existe) {
+                    alerta.innerHTML = "\uD83D\uDD14 Existe uma cotação disponível para preenchimento!";
+                } else {
+                    alerta.innerHTML = "<span style='color: red;'>Horário de envio expirado!</span>";
+                }
+            });
         }
-      });
-    });
-  </script>
+
+        document.getElementById("cotacaoForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const file = document.getElementById("imagem_tabloide").files[0];
+            const ref = storage.ref().child("tabloides/" + Date.now() + (file ? "_" + file.name : ""));
+
+            const enviarDados = (url = "") => {
+                const cotacao = {
+                    numero: document.getElementById("numero_cotacao").value,
+                    data: new Date().toISOString().split('T')[0],
+                    fornecedor: document.getElementById("fornecedor").value,
+                    cnpj: document.getElementById("cnpj").value,
+                    vendedor: document.getElementById("vendedor").value,
+                    fone: document.getElementById("fone").value,
+                    telefone_fixo: document.getElementById("telefone_fixo").value,
+                    email: document.getElementById("email").value,
+                    data_entrega: document.getElementById("data_entrega").value,
+                    prazo_pagamento: document.getElementById("prazo").value,
+                    validade_preco: document.getElementById("validade_preco").value,
+                    valor_minimo: document.getElementById("valor_minimo").value,
+                    observacao: document.getElementById("observacao").value,
+                    produto: {
+                        nome: document.getElementById("produto_nome").value,
+                        embalagem: document.getElementById("produto_embalagem").value,
+                        marca: document.getElementById("produto_marca").value,
+                        quantidade: document.getElementById("produto_qtd").value,
+                        valor: document.getElementById("produto_valor").value
+                    },
+                    tabloideURL: url
+                };
+                db.ref("cotacoes").push(cotacao).then(() => {
+                    document.getElementById("status").innerHTML = "<span style='color: blue;'>Obrigado pelo envio de sua cotação! Nossa apuração é realizada via sistema.</span>";
+                    document.getElementById("cotacaoForm").reset();
+                });
+            };
+
+            if (file) {
+                ref.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => enviarDados(url));
+            } else {
+                enviarDados();
+            }
+        });
+
+        function compartilharWhatsApp() {
+            const numero = document.getElementById("fone").value;
+            const msg = encodeURIComponent("Enviei minha cotação pelo sistema. Por favor, verifique!");
+            window.open(`https://wa.me/55${numero}?text=${msg}`, '_blank');
+        }
+
+        function gerarPDF() {
+            const element = document.getElementById("cotacaoForm");
+            html2pdf().from(element).save("cotacao.pdf");
+        }
+    </script>
 </body>
 </html>
