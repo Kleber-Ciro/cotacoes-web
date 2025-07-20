@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Selecionar Itens para Pedido</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 1000px;
+      margin: auto;
+    }
+    h2 {
+      color: #0055ff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .atencao {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Selecionar Itens para Pedido</h2>
+
+  <label>Número da Cotação:</label>
+  <input type="text" id="numeroCotacao" placeholder="Ex: COT-1234567890">
+  <button onclick="carregarCotacao()">Carregar</button>
+
+  <div id="resultado"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function carregarCotacao() {
+      const numero = document.getElementById("numeroCotacao").value;
+      const container = document.getElementById("resultado");
+      container.innerHTML = "";
+
+      db.ref("cotacoes/" + numero).once("value").then(snapshot => {
+        if (!snapshot.exists()) {
+          container.innerHTML = "<p>Cotação não encontrada.</p>";
+          return;
+        }
+
+        const cotacao = snapshot.val();
+        const produtos = cotacao.produtos;
+        const fornecedoresTotais = {}; // Armazena o total por fornecedor
+        const valorMinimo = {}; // Armazena valor mínimo exigido por fornecedor
+
+        let tabela = "<table><thead><tr><th>Produto</th><th>Fornecedor</th><th>Preço</th><th>Qtd</th><th>Total</th><th>Status</th></tr></thead><tbody>";
+
+        for (const codProd in produtos) {
+          const info = produtos[codProd];
+          const preco = parseFloat(info.preco || 0);
+          const fornecedor = info.fornecedor || "---";
+          const quantidade = 10; // valor fictício para exemplo
+          const total = preco * quantidade;
+
+          if (!fornecedoresTotais[fornecedor]) fornecedoresTotais[fornecedor] = 0;
+          fornecedoresTotais[fornecedor] += total;
+
+          if (info.valorMinimoPedido) valorMinimo[fornecedor] = parseFloat(info.valorMinimoPedido);
+
+          tabela += `<tr>
+            <td>${codProd}</td>
+            <td>${fornecedor}</td>
+            <td>R$ ${preco.toFixed(2)}</td>
+            <td>${quantidade}</td>
+            <td>R$ ${total.toFixed(2)}</td>
+            <td></td>
+          </tr>`;
+        }
+
+        tabela += "</tbody></table>";
+        container.innerHTML = tabela;
+
+        for (const fornecedor in fornecedoresTotais) {
+          const total = fornecedoresTotais[fornecedor];
+          const minimo = valorMinimo[fornecedor] || 0;
+          if (total < minimo) {
+            const alerta = document.createElement("p");
+            alerta.innerHTML = `⚠ <span class='atencao'>Valor de pedido abaixo do mínimo indicado pelo fornecedor (${fornecedor}): R$ ${total.toFixed(2)} < R$ ${minimo.toFixed(2)}</span>`;
+            container.appendChild(alerta);
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
