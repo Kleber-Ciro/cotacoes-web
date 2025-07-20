@@ -1,62 +1,43 @@
+<!-- BLOQUEIO DE FORNECEDORES -->
+<h3 style="margin-top: 40px; color: #0055ff;">🔒 Fornecedores Cadastrados</h3>
+<div id="listaFornecedores"></div>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Cadastro de Produtos - Varejista</title>
-</head>
-<body>
-    <h2>Cadastro de Produtos para Cotação</h2>
-    <form id="produtoForm">
-        <label>Descrição do Produto:<br><input type="text" id="descricao" required></label><br><br>
-        <label>Embalagem (kg/unidade):<br><input type="text" id="embalagem" required></label><br><br>
-        <label>Marca:<br><input type="text" id="marca" required></label><br><br>
-        <label>Quantidade:<br><input type="number" id="quantidade" required></label><br><br>
-        <button type="submit">Cadastrar Produto</button>
-    </form>
+<script>
+  function carregarFornecedores() {
+    const lista = document.getElementById("listaFornecedores");
+    lista.innerHTML = "<p>Carregando...</p>";
 
-    <p id="status"></p>
+    firebase.database().ref("fornecedores").once("value").then(snapshot => {
+      let html = "<table border='1' width='100%' style='margin-top: 15px;'><tr><th>Razão Social</th><th>CNPJ</th><th>Status</th><th>Observação</th><th>Ação</th></tr>";
+      snapshot.forEach(f => {
+        const dados = f.val();
+        const status = dados.status || "ATIVO";
+        const obs = dados.observacao || "";
+        html += `<tr>
+          <td>${dados.razaoSocial}</td>
+          <td>${dados.cnpj}</td>
+          <td>${status}</td>
+          <td><input type="text" id="obs_${f.key}" value="${obs}" maxlength="125" style="width: 100%;"></td>
+          <td>
+            <button onclick="bloquearFornecedor('${f.key}')">Bloquear</button>
+          </td>
+        </tr>`;
+      });
+      html += "</table>";
+      lista.innerHTML = html;
+    });
+  }
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script>
-        // CONFIGURAÇÃO DO FIREBASE
-        var firebaseConfig = {
-            apiKey: "SUA_API_KEY",
-            authDomain: "cotacoes---konect.firebaseapp.com",
-            databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
-            projectId: "cotacoes---konect",
-            storageBucket: "cotacoes---konect.appspot.com",
-            messagingSenderId: "SENDER_ID",
-            appId: "APP_ID"
-        };
-        firebase.initializeApp(firebaseConfig);
-        var database = firebase.database();
+  function bloquearFornecedor(cod) {
+    const obs = document.getElementById("obs_" + cod).value;
+    firebase.database().ref("fornecedores/" + cod).update({
+      status: "BLOQUEADO",
+      observacao: obs
+    }).then(() => {
+      alert("Fornecedor bloqueado com sucesso!");
+      carregarFornecedores();
+    });
+  }
 
-        // ENVIO DO FORMULÁRIO
-        document.getElementById("produtoForm").addEventListener("submit", function(e) {
-            e.preventDefault();
-            var descricao = document.getElementById("descricao").value;
-            var embalagem = document.getElementById("embalagem").value;
-            var marca = document.getElementById("marca").value;
-            var quantidade = document.getElementById("quantidade").value;
-
-            var novoProduto = {
-                descricao: descricao,
-                embalagem: embalagem,
-                marca: marca,
-                quantidade: quantidade
-            };
-
-            database.ref("produtos").push(novoProduto)
-                .then(() => {
-                    document.getElementById("status").innerText = "Produto cadastrado com sucesso!";
-                    document.getElementById("produtoForm").reset();
-                })
-                .catch((error) => {
-                    document.getElementById("status").innerText = "Erro ao salvar: " + error.message;
-                });
-        });
-    </script>
-</body>
-</html>
+  window.onload = carregarFornecedores;
+</script>
