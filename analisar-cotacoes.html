@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Análise de Cotações</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 1000px;
+      margin: auto;
+    }
+    h2 {
+      color: #0055ff;
+    }
+    input {
+      padding: 6px;
+      margin: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .menor-preco {
+      background-color: #d4fcd4;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Análise de Cotações</h2>
+
+  <label>Filtro por Produto:</label>
+  <input type="text" id="filtroProduto" placeholder="Ex: PRD-0001">
+
+  <label>Filtro por Número da Cotação:</label>
+  <input type="text" id="filtroCotacao" placeholder="Ex: cot-001">
+
+  <label>Data Inicial:</label>
+  <input type="date" id="dataInicial">
+
+  <label>Data Final:</label>
+  <input type="date" id="dataFinal">
+
+  <button onclick="carregarCotacoes()">Buscar</button>
+
+  <table id="tabelaResultados">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Nº Cot.</th>
+        <th>Produto</th>
+        <th>Fornecedor</th>
+        <th>Preço (R$)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function carregarCotacoes() {
+      const produtoFiltro = document.getElementById("filtroProduto").value.trim();
+      const cotacaoFiltro = document.getElementById("filtroCotacao").value.trim();
+      const dataIni = document.getElementById("dataInicial").value;
+      const dataFim = document.getElementById("dataFinal").value;
+      const tbody = document.querySelector("#tabelaResultados tbody");
+      tbody.innerHTML = "";
+
+      db.ref("cotacoes").once("value").then(snapshot => {
+        let dados = [];
+
+        snapshot.forEach(cot => {
+          const idCot = cot.key;
+          const data = cot.val().data;
+          const produtos = cot.val().produtos;
+
+          if (cotacaoFiltro && !idCot.includes(cotacaoFiltro)) return;
+          if (dataIni && new Date(data) < new Date(dataIni)) return;
+          if (dataFim && new Date(data) > new Date(dataFim)) return;
+
+          for (const codProduto in produtos) {
+            if (produtoFiltro && !codProduto.includes(produtoFiltro)) continue;
+            dados.push({
+              data,
+              idCot,
+              produto: codProduto,
+              fornecedor: produtos[codProduto].fornecedor,
+              preco: produtos[codProduto].preco
+            });
+          }
+        });
+
+        // Agrupar por produto e identificar menor preço
+        const menores = {};
+        dados.forEach(item => {
+          if (!menores[item.produto] || item.preco < menores[item.produto]) {
+            menores[item.produto] = item.preco;
+          }
+        });
+
+        // Ordenar por data
+        dados.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+        // Popular tabela
+        dados.forEach(item => {
+          const linha = document.createElement("tr");
+          if (item.preco === menores[item.produto]) linha.classList.add("menor-preco");
+          linha.innerHTML = `
+            <td>${item.data}</td>
+            <td>${item.idCot}</td>
+            <td>${item.produto}</td>
+            <td>${item.fornecedor}</td>
+            <td>${item.preco.toFixed(2)}</td>
+          `;
+          tbody.appendChild(linha);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
