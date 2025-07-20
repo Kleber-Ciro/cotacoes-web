@@ -2,71 +2,38 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Criar Cotação - Varejista</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criar Nova Cotação</title>
+  <link rel="stylesheet" href="estilo_login.css">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      max-width: 900px;
-      margin: auto;
-    }
-    h2 {
-      color: #0055ff;
-    }
-    label {
-      display: block;
-      margin-top: 12px;
-    }
-    input, select, textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    .botao {
-      margin-top: 20px;
-      padding: 12px;
-      background-color: #0055ff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .botao:hover {
-      background-color: #003dcc;
-    }
-    ul {
-      margin-top: 10px;
-      padding-left: 20px;
-    }
-  </style>
 </head>
 <body>
-  <h2>Criar Nova Cotação</h2>
+  <div class="container">
+    <h2 style="color: #0047FF">Criar Nova Cotação</h2>
 
-  <form id="formCotacao">
-    <label>Descrição ou Nº da Cotação:</label>
-    <input type="text" id="descricaoCotacao" required>
+    <button onclick="voltarMenu()" style="margin-bottom: 20px">⬅️ Voltar ao Menu</button>
 
-    <label>Data da Cotação:</label>
-    <input type="text" id="dataCotacao" readonly>
+    <form id="form-cotacao">
+      <p><strong>Número da Cotação:</strong></p>
+      <input type="text" id="numeroCotacao" disabled>
 
-    <label>Horário Limite para Envio (Ex: 16:00):</label>
-    <input type="time" id="horarioLimite" required>
+      <p><strong>Data da Cotação:</strong></p>
+      <input type="date" id="dataCotacao" required>
 
-    <label>Selecionar Produtos (Ctrl + clique para múltiplos):</label>
-    <select id="produtosSelect" multiple size="6"></select>
+      <p><strong>Horário Limite para Envio (Ex: 16:00):</strong></p>
+      <input type="time" id="horarioLimite" required>
 
-    <button type="submit" class="botao">Salvar Cotação</button>
-  </form>
+      <p><strong>Selecionar Produtos:</strong> <span style="font-size: 12px">(Ctrl + clique para múltiplos)</span></p>
+      <select id="produtos" multiple required style="min-height: 100px"></select>
 
-  <div id="mensagem"></div>
+      <br><br>
+      <button type="submit">Salvar Cotação</button>
+    </form>
+  </div>
 
   <script>
+    // Configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
       authDomain: "cotacoes---konect.firebaseapp.com",
@@ -79,57 +46,80 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Preencher data automática
-    const hoje = new Date();
-    const dataFormatada = hoje.toISOString().split('T')[0];
-    document.getElementById("dataCotacao").value = dataFormatada;
+    // Gerar número automático da cotação
+    function gerarNumeroCotacao(callback) {
+      const hoje = new Date();
+      const dataStr = hoje.toISOString().split('T')[0].replace(/-/g, '');
+      const prefixo = `COT-${dataStr}`;
 
-    // Carregar produtos cadastrados
-    const produtosSelect = document.getElementById("produtosSelect");
-    db.ref("produtos").once("value").then(snapshot => {
-      snapshot.forEach(prod => {
-        const codigo = prod.key;
-        const descricao = prod.val().descricao || "";
-        const option = document.createElement("option");
-        option.value = codigo;
-        option.text = `${codigo} - ${descricao}`;
-        produtosSelect.appendChild(option);
+      db.ref("/cotacoes").once("value", snapshot => {
+        let contador = 1;
+        snapshot.forEach(child => {
+          if (child.key.startsWith(prefixo)) contador++;
+        });
+        callback(`${prefixo}-${String(contador).padStart(3, '0')}`);
       });
-    });
+    }
+
+    // Carregar produtos
+    function carregarProdutos() {
+      const select = document.getElementById("produtos");
+      db.ref("/produtos").once("value", snapshot => {
+        if (!snapshot.exists()) {
+          const option = document.createElement("option");
+          option.textContent = "Nenhum produto disponível. Cadastre primeiro.";
+          option.disabled = true;
+          select.appendChild(option);
+          return;
+        }
+        snapshot.forEach(child => {
+          const produto = child.val();
+          const option = document.createElement("option");
+          option.value = child.key;
+          option.textContent = produto.descricao || "(Sem descrição)";
+          select.appendChild(option);
+        });
+      });
+    }
 
     // Salvar cotação
-    document.getElementById("formCotacao").addEventListener("submit", function(e) {
+    document.getElementById("form-cotacao").addEventListener("submit", function(e) {
       e.preventDefault();
+      const numero = document.getElementById("numeroCotacao").value;
+      const data = document.getElementById("dataCotacao").value;
+      const horario = document.getElementById("horarioLimite").value;
+      const produtosSelecionados = Array.from(document.getElementById("produtos").selectedOptions).map(opt => opt.value);
 
-      const cotacaoData = {
-        descricao: document.getElementById("descricaoCotacao").value,
-        data: document.getElementById("dataCotacao").value,
-        horarioLimite: document.getElementById("horarioLimite").value,
-        produtos: {}
+      if (produtosSelecionados.length === 0) return alert("Selecione ao menos um produto.");
+
+      const novaCotacao = {
+        numeroCotacao: numero,
+        dataCotacao: data,
+        horarioLimite: horario,
+        produtos: produtosSelecionados
       };
 
-      const selecionados = Array.from(produtosSelect.selectedOptions).map(opt => opt.value);
-      if (selecionados.length === 0) {
-        alert("Selecione ao menos um produto!");
-        return;
-      }
-
-      selecionados.forEach(codigo => {
-        cotacaoData.produtos[codigo] = {
-          status: "aguardando",
-          fornecedor: "",
-          preco: 0
-        };
-      });
-
-      db.ref("cotacoes").push(cotacaoData).then(() => {
-        document.getElementById("mensagem").innerText = "Cotação criada com sucesso!";
-        document.getElementById("formCotacao").reset();
-        document.getElementById("dataCotacao").value = dataFormatada;
-        produtosSelect.innerHTML = ""; // reset produtos
-        setTimeout(() => window.location.reload(), 1500);
+      db.ref(`/cotacoes/${numero}`).set(novaCotacao, (error) => {
+        if (error) {
+          alert("Erro ao salvar: " + error.message);
+        } else {
+          alert("Cotação salva com sucesso!");
+          window.location.href = "formulario_varejista.html";
+        }
       });
     });
+
+    // Voltar
+    function voltarMenu() {
+      window.location.href = "formulario_varejista.html";
+    }
+
+    // Inicialização
+    window.onload = () => {
+      gerarNumeroCotacao(numero => document.getElementById("numeroCotacao").value = numero);
+      carregarProdutos();
+      document.getElementById("dataCotacao").valueAsDate = new Date();
+    }
   </script>
 </body>
 </html>
