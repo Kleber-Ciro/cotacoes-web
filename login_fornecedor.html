@@ -1,85 +1,101 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Login do Fornecedor</title>
+  <title>Login Fornecedor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f4f7fb;
+      background-color: #f1f5f9;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
-      margin: 0;
     }
     .login-container {
       background-color: white;
-      padding: 30px 40px;
-      border-radius: 10px;
-      box-shadow: 0px 0px 10px #aaa;
-      max-width: 400px;
-      width: 100%;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+      width: 350px;
     }
     h2 {
       color: #0055ff;
       text-align: center;
     }
     label {
+      margin-top: 12px;
       display: block;
-      margin-top: 15px;
+      font-weight: bold;
     }
     input {
       width: 100%;
       padding: 10px;
-      margin-top: 5px;
-      border-radius: 6px;
+      margin-top: 6px;
+      margin-bottom: 15px;
+      border-radius: 8px;
       border: 1px solid #ccc;
     }
     button {
       width: 100%;
-      margin-top: 20px;
       padding: 12px;
       background-color: #0055ff;
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 16px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #003dcc;
+      background-color: #003fcc;
     }
-    .mensagem-erro {
-      margin-top: 10px;
+    .mensagem {
+      text-align: center;
+      margin-top: 12px;
+      font-weight: bold;
+    }
+    .erro {
       color: red;
+    }
+    .sucesso {
+      color: green;
+    }
+    .criar-conta {
+      margin-top: 15px;
       text-align: center;
     }
-    .mensagem-sucesso {
-      margin-top: 10px;
-      color: green;
-      text-align: center;
+    .criar-conta a {
+      color: #0055ff;
+      text-decoration: none;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
+
   <div class="login-container">
     <h2>Login do Fornecedor</h2>
     <form id="loginForm">
       <label for="codigoFornecedor">Código do Fornecedor:</label>
-      <input type="text" id="codigoFornecedor" required placeholder="Ex: FORN-123">
+      <input type="text" id="codigoFornecedor" placeholder="Ex: FORN-001" required>
 
       <label for="senhaFornecedor">Senha:</label>
-      <input type="password" id="senhaFornecedor" required placeholder="Mínimo 6 caracteres">
+      <input type="password" id="senhaFornecedor" placeholder="Mín. 6 caracteres" required>
 
       <button type="submit">Entrar</button>
     </form>
-    <div id="mensagem" class="mensagem-erro"></div>
+
+    <div class="criar-conta">
+      <p>Ainda não tem acesso? <a href="cadastro_fornecedor.html">Criar primeiro acesso</a></p>
+    </div>
+
+    <div id="mensagem" class="mensagem"></div>
   </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -95,27 +111,22 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    document.getElementById("loginForm").addEventListener("submit", function (e) {
+    const loginForm = document.getElementById("loginForm");
+    const mensagem = document.getElementById("mensagem");
+
+    loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
 
       const codigo = document.getElementById("codigoFornecedor").value.trim();
       const senha = document.getElementById("senhaFornecedor").value.trim();
-      const mensagem = document.getElementById("mensagem");
 
-      db.ref("fornecedores/" + codigo).once("value").then(snapshot => {
-        if (snapshot.exists()) {
-          const dados = snapshot.val();
-          if (dados.senha === senha) {
-            localStorage.setItem("codigoFornecedorLogado", codigo);
-            window.location.href = "painel_fornecedor.html";
-          } else {
-            mensagem.innerText = "Senha incorreta!";
-          }
-        } else {
-          mensagem.innerText = "Fornecedor não encontrado!";
-        }
-      });
-    });
-  </script>
-</body>
-</html>
+      mensagem.innerText = "";
+      mensagem.classList.remove("erro", "sucesso");
+
+      if (senha.length < 6) {
+        mensagem.innerText = "A senha deve ter pelo menos 6 caracteres.";
+        mensagem.classList.add("erro");
+        return;
+      }
+
+      db.ref("fornec
