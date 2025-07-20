@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Respostas de Cotações Recebidas</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: auto; }
+    h2 { color: #0055ff; }
+    input, select { padding: 6px; margin: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    .menor-preco { background-color: #d4fcd4; font-weight: bold; }
+    .alerta-vermelho { color: red; font-weight: bold; }
+    .observacao { font-style: italic; color: #555; }
+    .vencido { background-color: #ffe5e5; }
+  </style>
+</head>
+<body>
+  <h2>📥 Respostas Recebidas dos Fornecedores</h2>
+
+  <label>Filtro por Produto: <input type="text" id="filtroProduto" placeholder="Ex: PRD-0001"></label>
+  <label>Número da Cotação: <input type="text" id="filtroCotacao" placeholder="Ex: CT001"></label>
+  <label>Data Inicial: <input type="date" id="dataInicial"></label>
+  <label>Data Final: <input type="date" id="dataFinal"></label>
+  <button onclick="carregarRespostas()">Buscar</button>
+
+  <table id="tabelaRespostas">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Nº Cotação</th>
+        <th>Produto</th>
+        <th>Fornecedor</th>
+        <th>Preço</th>
+        <th>Qtd</th>
+        <th>Total</th>
+        <th>Min. Pedido</th>
+        <th>Alerta</th>
+        <th>Tabloide</th>
+        <th>Observação</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AlzaSyCjse7Bzw-vantrt1s7UXr_ev6QCMlwxC8",
+      authDomain: "cotacoes---konect.firebaseapp.com",
+      databaseURL: "https://cotacoes---konect-default-rtdb.firebaseio.com",
+      projectId: "cotacoes---konect",
+      storageBucket: "cotacoes---konect.appspot.com",
+      messagingSenderId: "1037489090128",
+      appId: "1:1037489090128:web:09998d990338d15e276b55"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const storage = firebase.storage();
+
+    async function carregarRespostas() {
+      const produtoFiltro = document.getElementById("filtroProduto").value.trim();
+      const cotacaoFiltro = document.getElementById("filtroCotacao").value.trim();
+      const dataIni = document.getElementById("dataInicial").value;
+      const dataFim = document.getElementById("dataFinal").value;
+      const tbody = document.querySelector("#tabelaRespostas tbody");
+      tbody.innerHTML = "";
+
+      const snap = await db.ref("cotacoes").once("value");
+      const dados = [];
+
+      snap.forEach(cot => {
+        const cotacao = cot.val();
+        const idCot = cotacao.numero || cot.key;
+        const data = cotacao.data;
+
+        if (cotacaoFiltro && !idCot.includes(cotacaoFiltro)) return;
+        if (dataIni && new Date(data) < new Date(dataIni)) return;
+        if (dataFim && new Date(data) > new Date(dataFim)) return;
+
+        const prod = cotacao.produto || {};
+        if (produtoFiltro && !prod.nome?.toLowerCase().includes(produtoFiltro.toLowerCase())) return;
+
+        const total = prod.quantidade * prod.valor;
+        const fornecedor = cotacao.fornecedor || "Desconhecido";
+        const minPedido = parseFloat(cotacao.valorMinimoPedido || 0);
+        const alerta = total < minPedido;
+
+        dados.push({
+          data,
+          idCot,
+          produto: prod.nome || "-",
+          preco: prod.valor,
+          quantidade: prod.quantidade,
+          total,
+          fornecedor,
+          minPedido,
+          alerta,
+          observacao: cotacao.observacao || "",
+          tabloides: cotacao.imagens || []
+        });
+      });
+
+      // Agrupa para detectar menor preço por produto
+      const menores = {};
+      dados.forEach(item => {
+        const nome = item.produto;
+        if (!menores[nome] || item.preco < menores[nome]) {
+          menores[nome] = item.preco;
+        }
+      });
+
+      // Preenche tabela
+      dados.sort((a, b) => new Date(a.data) - new Date(b.data));
+      dados.forEach(item => {
+        const tr = document.createElement("tr");
+        if (item.preco === menores[item.produto]) tr.classList.add("menor-preco");
+
+        const tabloideLinks = item.tabloides.map((url, idx) => `<a href="${url}" target="_blank">Ver ${idx + 1}</a>`).join(", ");
+
+        tr.innerHTML = `
+          <td>${item.data}</td>
+          <td>${item.idCot}</td>
+          <td>${item.produto}</td>
+          <td>${item.fornecedor}</td>
+          <td>R$ ${parseFloat(item.preco).toFixed(2)}</td>
+          <td>${item.quantidade}</td>
+          <td>R$ ${(item.total).toFixed(2)}</td>
+          <td>R$ ${item.minPedido.toFixed(2)}</td>
+          <td class="${item.alerta ? 'alerta-vermelho' : ''}">
+            ${item.alerta ? "❗ Abaixo do mínimo" : "✔️"}
+          </td>
+          <td>${tabloideLinks || "-"}</td>
+          <td class="observacao">${item.observacao}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>
